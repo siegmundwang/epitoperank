@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EpitopeRank — Ranking the Unseen</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#070f1e;color:#e2e8f0;line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+:root{
+  --cyan:#00d4ff;--teal:#009b9e;--teal-dark:#006b6d;
+  --navy:#070f1e;--navy-mid:#0d1a2e;--navy-card:#111e33;
+  --border:#1e3050;--text-muted:#94a3b8;--text-dim:#64748b;--white:#f8fafc;
+  --grad:linear-gradient(135deg,#00d4ff 0%,#009b9e 50%,#0070b8 100%);
+}
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:64px;background:rgba(7,15,30,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav-logo{font-size:1.25rem;font-weight:700;letter-spacing:.04em;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:1.75rem;list-style:none}
+.nav-links a{font-size:.875rem;color:var(--text-muted);letter-spacing:.03em;transition:color .2s}
+.nav-links a:hover{color:var(--cyan)}
+.nav-lang{display:flex;gap:.4rem}
+.nav-lang button{background:none;border:1px solid var(--border);color:var(--text-muted);padding:.22rem .55rem;border-radius:.3rem;font-size:.72rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-lang button:hover,.nav-lang button.active{border-color:var(--cyan);color:var(--cyan)}
+/* hero */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;padding:2rem}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,#0a2040 0%,#070f1e 70%)}
+.hero-grid{position:absolute;inset:0;opacity:.08;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px}
+.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.12) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-55%);animation:pulse 4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.6;transform:translate(-50%,-55%) scale(1)}50%{opacity:1;transform:translate(-50%,-55%) scale(1.08)}}
+.hero-content{position:relative;z-index:1;max-width:860px}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;border:1px solid rgba(0,212,255,.3);border-radius:2rem;padding:.35rem 1rem;font-size:.8rem;color:var(--cyan);margin-bottom:2rem;background:rgba(0,212,255,.06);letter-spacing:.06em;text-transform:uppercase}
+.hero-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:blink 1.5s step-end infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-title{font-size:clamp(2.8rem,7vw,5rem);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-bottom:1rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:1.15rem;color:var(--text-muted);margin-bottom:.5rem;letter-spacing:.03em}
+.hero-tagline{font-size:1rem;color:var(--text-dim);margin-bottom:2.5rem}
+.hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;border-radius:.5rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;border:none}
+.btn-primary{background:var(--grad);color:#000}.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,.3)}
+.btn-outline{border:1px solid var(--cyan);color:var(--cyan);background:transparent}.btn-outline:hover{background:rgba(0,212,255,.08);transform:translateY(-1px)}
+/* stats */
+#stats{background:var(--navy-mid);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:2.5rem 2rem}
+.stats-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px}
+.stat-item{text-align:center;padding:1rem 2rem;border-right:1px solid var(--border)}.stat-item:last-child{border-right:none}
+.stat-num{font-size:2.25rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
+.stat-label{font-size:.8rem;color:var(--text-muted);margin-top:.25rem;letter-spacing:.04em}
+/* sections */
+section{padding:6rem 2rem}
+.container{max-width:1100px;margin:0 auto}
+.section-label{display:inline-block;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:1rem}
+.section-title{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:700;line-height:1.2;margin-bottom:1rem;color:var(--white)}
+.section-desc{font-size:1rem;color:var(--text-muted);max-width:640px;line-height:1.7}
+.card{background:var(--navy-card);border:1px solid var(--border);border-radius:.875rem;padding:1.75rem;transition:border-color .2s,transform .2s}
+.card:hover{border-color:rgba(0,212,255,.3);transform:translateY(-2px)}
+/* problem */
+#problem{background:var(--navy)}
+.problem-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:3rem}
+.problem-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.875rem;padding:2rem;position:relative;overflow:hidden}
+.problem-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad)}
+.problem-num{font-size:3rem;font-weight:900;color:#1e3050;line-height:1;margin-bottom:.75rem}
+.problem-title{font-size:1.1rem;font-weight:700;color:var(--white);margin-bottom:.75rem}
+.problem-text{font-size:.875rem;color:var(--text-muted);line-height:1.7}
+.problem-stat{margin-top:1rem;padding:.75rem 1rem;background:rgba(0,212,255,.06);border-radius:.5rem;font-size:.8rem;color:var(--cyan);border:1px solid rgba(0,212,255,.15)}
+/* solution */
+#solution{background:var(--navy-mid)}
+.pipeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:3rem}
+.pipe-step{background:var(--navy-card);border:1px solid var(--border);padding:2rem 1.5rem;text-align:center;transition:border-color .2s}.pipe-step:hover{border-color:var(--cyan)}
+.pipe-step:first-child{border-radius:.875rem 0 0 .875rem}.pipe-step:last-child{border-radius:0 .875rem .875rem 0}
+.pipe-num{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800;margin:0 auto 1rem;background:var(--grad);color:#000}
+.pipe-en{font-size:.7rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin-bottom:.25rem}
+.pipe-cn{font-size:1.1rem;font-weight:700;color:var(--white);margin-bottom:1rem}
+.pipe-items{list-style:none;font-size:.8rem;color:var(--text-muted);text-align:left}
+.pipe-items li{padding:.3rem 0;padding-left:1rem;position:relative}.pipe-items li::before{content:"›";position:absolute;left:0;color:var(--cyan)}
+.pipe-tag{display:inline-block;margin-top:1rem;padding:.35rem .85rem;border-radius:2rem;font-size:.75rem;border:1px solid var(--border);color:var(--text-muted);background:rgba(0,0,0,.2)}
+.loop-bar{margin-top:1.5rem;padding:1rem 1.5rem;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:.5rem;font-size:.875rem;color:var(--cyan);text-align:center}
+/* tech */
+#technology{background:var(--navy)}
+.tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:3rem}
+.evidence-table{width:100%;border-collapse:collapse}
+.evidence-table th{text-align:left;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);padding:.75rem 1rem;border-bottom:1px solid var(--border)}
+.evidence-table td{padding:.6rem 1rem;font-size:.875rem;border-bottom:1px solid rgba(30,48,80,.5)}.evidence-table tr:last-child td{border-bottom:none}
+.level-badge{display:inline-block;padding:.2rem .6rem;border-radius:.3rem;font-size:.7rem;font-weight:700;letter-spacing:.06em}
+.lvl-a{background:rgba(0,212,255,.15);color:var(--cyan)}.lvl-b{background:rgba(0,155,158,.15);color:var(--teal)}.lvl-c{background:rgba(148,163,184,.1);color:#94a3b8}.lvl-d{background:rgba(100,116,139,.08);color:#64748b}
+.kg-nodes{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+.kg-node{padding:.4rem .85rem;border-radius:.3rem;font-size:.8rem;border:1px solid rgba(0,212,255,.25);color:var(--cyan);background:rgba(0,212,255,.06)}
+/* team */
+#team{background:var(--navy-mid)}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:3rem}
+.team-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.875rem;padding:2rem;display:flex;gap:1.25rem;transition:border-color .2s}.team-card:hover{border-color:rgba(0,212,255,.3)}
+.avatar{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:#000;background:var(--grad);flex-shrink:0}
+.team-role{display:inline-block;font-size:.75rem;padding:.2rem .6rem;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:.3rem;color:var(--cyan);margin-bottom:.75rem}
+.team-bio{font-size:.8rem;color:var(--text-muted);line-height:1.6}
+.advisors{margin-top:4rem}.advisors h3{font-size:1.2rem;color:var(--white);margin-bottom:1.5rem}
+.advisor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.advisor-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+.advisor-avatar{width:44px;height:44px;min-width:44px;border-radius:50%;background:linear-gradient(135deg,var(--teal-dark),var(--navy-mid));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;color:var(--cyan);border:1px solid rgba(0,155,158,.3)}
+.advisor-name{font-size:.95rem;font-weight:600;color:var(--white)}.advisor-inst{font-size:.75rem;color:var(--text-muted)}.advisor-role{font-size:.7rem;color:var(--teal);margin-top:.15rem}
+/* market */
+#market{background:var(--navy)}
+.market-funnel{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
+.funnel-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.875rem;padding:2rem;text-align:center;position:relative;overflow:hidden}
+.funnel-card::after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px}
+.funnel-tam::after{background:linear-gradient(90deg,#00d4ff,#0070b8)}.funnel-sam::after{background:linear-gradient(90deg,#009b9e,#005f6b)}.funnel-som::after{background:linear-gradient(90deg,#1e6b72,#0d4a4f)}
+.funnel-label{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.5rem}
+.funnel-abbr{font-size:1.1rem;font-weight:700;color:var(--white);margin-bottom:.5rem}
+.funnel-amount{font-size:2.5rem;font-weight:800;line-height:1;margin-bottom:.75rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.funnel-desc{font-size:.8rem;color:var(--text-muted);line-height:1.6}
+.tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:3rem}
+.tier-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem}
+.tier-num{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:.5rem}
+.tier-name{font-size:.95rem;font-weight:700;color:var(--white);margin-bottom:.5rem}
+.tier-desc{font-size:.8rem;color:var(--text-muted)}.tier-price{margin-top:.75rem;font-size:.875rem;color:var(--teal);font-weight:600}
+/* milestones */
+#milestones{background:var(--navy-mid)}
+.timeline{position:relative;margin-top:1.5rem;padding-left:2rem}
+.timeline::before{content:"";position:absolute;left:.75rem;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--cyan),var(--teal),var(--teal-dark))}
+.tl-item{position:relative;margin-bottom:2rem;padding-left:2.5rem}
+.tl-dot{position:absolute;left:-1.5rem;top:.25rem;width:14px;height:14px;border-radius:50%;border:2px solid var(--teal);background:var(--navy)}
+.tl-dot.active{background:var(--teal);border-color:var(--cyan);box-shadow:0 0 8px rgba(0,212,255,.4)}
+.tl-date{font-size:.75rem;color:var(--text-dim);letter-spacing:.06em;margin-bottom:.25rem}
+.tl-title{font-size:.95rem;font-weight:600;color:var(--white);margin-bottom:.25rem}
+.tl-desc{font-size:.8rem;color:var(--text-muted)}
+/* partners */
+#partners{background:var(--navy)}
+.partner-row{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2rem}
+.partner-tag{padding:.6rem 1.25rem;background:var(--navy-card);border:1px solid var(--border);border-radius:.5rem;font-size:.875rem;color:var(--text-muted);transition:border-color .2s,color .2s}.partner-tag:hover{border-color:var(--teal);color:var(--white)}
+.award-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:2rem}
+.award-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;display:flex;align-items:flex-start;gap:1rem}
+.award-icon{font-size:1.5rem;margin-top:.1rem}.award-title{font-size:.95rem;font-weight:600;color:var(--white);margin-bottom:.25rem}.award-desc{font-size:.8rem;color:var(--text-muted)}
+/* contact */
+#contact{background:radial-gradient(ellipse 80% 70% at 50% 100%,#0a2040 0%,var(--navy) 70%);text-align:center}
+.contact-inner{max-width:640px;margin:0 auto}
+.contact-info{display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;margin-top:2.5rem}
+.contact-item{display:flex;align-items:center;gap:.75rem;padding:1rem 1.5rem;background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;font-size:.875rem;color:var(--text-muted)}
+footer{background:var(--navy-card);border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:.8rem;color:var(--text-dim)}
+footer strong{color:var(--text-muted)}
+@media(max-width:768px){
+  nav{padding:0 1.25rem}.nav-links{display:none}
+  .pipeline,.market-funnel,.tier-grid,.tech-grid{grid-template-columns:1fr}
+  .pipe-step:first-child,.pipe-step:last-child{border-radius:.875rem}
+  section{padding:4rem 1.25rem}.milestones-inner{grid-template-columns:1fr!important}
+}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-logo">EpitopeRank</div>
+  <ul class="nav-links">
+    <li><a href="#problem" data-i18n="nav.problem"></a></li>
+    <li><a href="#solution" data-i18n="nav.solution"></a></li>
+    <li><a href="#technology" data-i18n="nav.technology"></a></li>
+    <li><a href="#team" data-i18n="nav.team"></a></li>
+    <li><a href="#market" data-i18n="nav.market"></a></li>
+    <li><a href="#milestones" data-i18n="nav.milestones"></a></li>
+    <li><a href="#partners" data-i18n="nav.partners"></a></li>
+    <li><a href="#contact" data-i18n="nav.contact"></a></li>
+  </ul>
+  <div class="nav-lang">
+    <button data-lang="zh-CN" class="active">简中</button>
+    <button data-lang="zh-TW">繁中</button>
+    <button data-lang="en">EN</button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section id="hero">
+  <div class="hero-bg"></div><div class="hero-grid"></div><div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-badge" data-i18n="hero.badge"></div>
+    <h1 class="hero-title">EpitopeRank</h1>
+    <p class="hero-sub" data-i18n="hero.sub"></p>
+    <p class="hero-tagline" data-i18n="hero.tagline"></p>
+    <div class="hero-cta">
+      <a href="#solution" class="btn btn-primary" data-i18n="hero.cta.learn"></a>
+      <a href="#contact" class="btn btn-outline" data-i18n="hero.cta.contact"></a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div id="stats">
+  <div class="stats-grid">
+    <div class="stat-item"><div class="stat-num">48–70%</div><div class="stat-label" data-i18n="stats.tcell"></div></div>
+    <div class="stat-item"><div class="stat-num" data-i18n="stats.evidence.num"></div><div class="stat-label" data-i18n="stats.evidence.label"></div></div>
+    <div class="stat-item"><div class="stat-num" data-i18n="stats.patent.num"></div><div class="stat-label" data-i18n="stats.patent.label"></div></div>
+    <div class="stat-item"><div class="stat-num">Top-K</div><div class="stat-label" data-i18n="stats.topk"></div></div>
+    <div class="stat-item"><div class="stat-num">$40B</div><div class="stat-label" data-i18n="stats.market"></div></div>
+  </div>
+</div>
+
+<!-- Problem -->
+<section id="problem">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="problem.label"></div>
+      <h2 class="section-title" data-i18n-html="problem.title"></h2>
+      <p class="section-desc" data-i18n="problem.desc"></p>
+    </div>
+    <div class="problem-cards reveal">
+      <div class="problem-card">
+        <div class="problem-num">01</div>
+        <div class="problem-title" data-i18n="p1.title"></div>
+        <p class="problem-text" data-i18n="p1.text"></p>
+        <div class="problem-stat" data-i18n="p1.stat"></div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-num">02</div>
+        <div class="problem-title" data-i18n="p2.title"></div>
+        <p class="problem-text" data-i18n="p2.text"></p>
+        <div class="problem-stat" data-i18n="p2.stat"></div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-num">03</div>
+        <div class="problem-title" data-i18n="p3.title"></div>
+        <p class="problem-text" data-i18n="p3.text"></p>
+        <div class="problem-stat" data-i18n="p3.stat"></div>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:2rem;padding:1.5rem 2rem;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:.875rem;text-align:center">
+      <p style="font-size:.95rem;color:var(--cyan)" data-i18n="problem.insight"></p>
+    </div>
+  </div>
+</section>
+
+<!-- Solution -->
+<section id="solution">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="solution.label"></div>
+      <h2 class="section-title" data-i18n-html="solution.title"></h2>
+      <p class="section-desc" data-i18n="solution.desc"></p>
+    </div>
+    <div class="pipeline reveal">
+      <div class="pipe-step">
+        <div class="pipe-num">1</div>
+        <div class="pipe-en">Retrieve</div>
+        <div class="pipe-cn" data-i18n="pipe1.cn"></div>
+        <ul class="pipe-items">
+          <li data-i18n="pipe1.li1"></li><li data-i18n="pipe1.li2"></li>
+          <li data-i18n="pipe1.li3"></li><li data-i18n="pipe1.li4"></li>
+        </ul>
+        <span class="pipe-tag" data-i18n="pipe1.tag"></span>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">2</div>
+        <div class="pipe-en">Rank</div>
+        <div class="pipe-cn" data-i18n="pipe2.cn"></div>
+        <ul class="pipe-items">
+          <li data-i18n="pipe2.li1"></li><li data-i18n="pipe2.li2"></li>
+          <li data-i18n="pipe2.li3"></li><li data-i18n="pipe2.li4"></li>
+        </ul>
+        <span class="pipe-tag" data-i18n="pipe2.tag"></span>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">3</div>
+        <div class="pipe-en">Rerank</div>
+        <div class="pipe-cn" data-i18n="pipe3.cn"></div>
+        <ul class="pipe-items">
+          <li data-i18n="pipe3.li1"></li><li data-i18n="pipe3.li2"></li>
+          <li data-i18n="pipe3.li3"></li><li data-i18n="pipe3.li4"></li>
+        </ul>
+        <span class="pipe-tag" data-i18n="pipe3.tag"></span>
+      </div>
+    </div>
+    <div class="loop-bar reveal" data-i18n="solution.loop"></div>
+  </div>
+</section>
+
+<!-- Technology -->
+<section id="technology">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="tech.label"></div>
+      <h2 class="section-title" data-i18n-html="tech.title"></h2>
+      <p class="section-desc" data-i18n="tech.desc"></p>
+    </div>
+    <div class="tech-grid reveal">
+      <div>
+        <div class="card" style="margin-bottom:1.5rem">
+          <div style="font-size:1rem;font-weight:600;color:var(--white);margin-bottom:1rem" data-i18n="tech.kg.title"></div>
+          <div class="kg-nodes">
+            <span class="kg-node">Peptide</span>
+            <span class="kg-node">HLA Allele</span>
+            <span class="kg-node" data-i18n="tech.kg.node3"></span>
+            <span class="kg-node" data-i18n="tech.kg.node4"></span>
+            <span class="kg-node">TCR Clonotype</span>
+          </div>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-top:.75rem" data-i18n="tech.kg.edges"></p>
+        </div>
+        <div class="card">
+          <div style="font-size:1rem;font-weight:600;color:var(--white);margin-bottom:1rem" data-i18n="tech.inno.title"></div>
+          <div style="display:grid;gap:.65rem" id="inno-list">
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.1"></span></div>
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.2"></span></div>
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.3"></span></div>
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.4"></span></div>
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.5"></span></div>
+            <div style="display:flex;gap:.75rem;align-items:start"><span style="color:var(--cyan);font-size:.85rem;flex-shrink:0">◆</span><span style="font-size:.85rem;color:var(--text-muted)" data-i18n="inno.6"></span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div style="font-size:1rem;font-weight:600;color:var(--white);margin-bottom:1rem" data-i18n="tech.evidence.title"></div>
+          <table class="evidence-table">
+            <thead><tr><th data-i18n="ev.th1"></th><th data-i18n="ev.th2"></th><th data-i18n="ev.th3"></th></tr></thead>
+            <tbody>
+              <tr><td><span class="level-badge lvl-a">Level A</span></td><td style="color:#e2e8f0" data-i18n="ev.a.type"></td><td style="color:var(--text-muted)" data-i18n="ev.a.src"></td></tr>
+              <tr><td><span class="level-badge lvl-b">Level B</span></td><td style="color:#e2e8f0" data-i18n="ev.b.type"></td><td style="color:var(--text-muted)" data-i18n="ev.b.src"></td></tr>
+              <tr><td><span class="level-badge lvl-c">Level C</span></td><td style="color:#e2e8f0" data-i18n="ev.c.type"></td><td style="color:var(--text-muted)" data-i18n="ev.c.src"></td></tr>
+              <tr><td><span class="level-badge lvl-d">Level D</span></td><td style="color:#e2e8f0" data-i18n="ev.d.type"></td><td style="color:var(--text-muted)" data-i18n="ev.d.src"></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:1.5rem">
+            <div style="font-size:.95rem;font-weight:600;color:var(--white);margin-bottom:.75rem" data-i18n="tech.hla.title"></div>
+            <p style="font-size:.85rem;color:var(--text-muted);line-height:1.7" data-i18n-html="tech.hla.text"></p>
+          </div>
+          <div style="margin-top:1.25rem;padding:.875rem 1rem;background:rgba(0,155,158,.06);border:1px solid rgba(0,155,158,.2);border-radius:.5rem">
+            <p style="font-size:.8rem;color:var(--teal)" data-i18n="tech.patent"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Team -->
+<section id="team">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="team.label"></div>
+      <h2 class="section-title" data-i18n="team.title"></h2>
+      <p class="section-desc" data-i18n="team.desc"></p>
+    </div>
+    <div class="team-grid reveal">
+      <div class="team-card">
+        <div class="avatar">王</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--white)">王子玮</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Ziwei Wang</div>
+          <span class="team-role">CEO / Chief Algorithm Architect</span>
+          <p class="team-bio" data-i18n="m1.bio"></p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar">钟</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--white)" data-i18n="m2.name"></div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Ming Zhong</div>
+          <span class="team-role" data-i18n="m2.role"></span>
+          <p class="team-bio" data-i18n="m2.bio"></p>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar">王</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--white)" data-i18n="m3.name"></div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Tingyu Wang</div>
+          <span class="team-role" data-i18n="m3.role"></span>
+          <p class="team-bio" data-i18n="m3.bio"></p>
+        </div>
+      </div>
+    </div>
+    <div class="advisors reveal">
+      <h3 data-i18n="advisors.title"></h3>
+      <div class="advisor-grid">
+        <div class="advisor-card"><div class="advisor-avatar">王</div><div><div class="advisor-name">王欣</div><div class="advisor-inst" data-i18n="adv.1.inst"></div><div class="advisor-role" data-i18n="adv.1.role"></div></div></div>
+        <div class="advisor-card"><div class="advisor-avatar">王</div><div><div class="advisor-name">王宪赓</div><div class="advisor-inst">AuroraEpitope Limited</div><div class="advisor-role" data-i18n="adv.2.role"></div></div></div>
+        <div class="advisor-card"><div class="advisor-avatar">詹</div><div><div class="advisor-name" data-i18n="adv.3.name"></div><div class="advisor-inst" data-i18n="adv.3.inst"></div><div class="advisor-role" data-i18n="adv.3.role"></div></div></div>
+        <div class="advisor-card"><div class="advisor-avatar">史</div><div><div class="advisor-name">史嘉海</div><div class="advisor-inst" data-i18n="adv.4.inst"></div><div class="advisor-role" data-i18n="adv.4.role"></div></div></div>
+        <div class="advisor-card"><div class="advisor-avatar">顾</div><div><div class="advisor-name">顾晓燕</div><div class="advisor-inst">AstraZeneca</div><div class="advisor-role" data-i18n="adv.5.role"></div></div></div>
+        <div class="advisor-card"><div class="advisor-avatar">张</div><div><div class="advisor-name">张为民</div><div class="advisor-inst" data-i18n="adv.6.inst"></div><div class="advisor-role" data-i18n="adv.6.role"></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Market -->
+<section id="market">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="market.label"></div>
+      <h2 class="section-title" data-i18n-html="market.title"></h2>
+      <p class="section-desc" data-i18n="market.desc"></p>
+    </div>
+    <div class="market-funnel reveal">
+      <div class="funnel-card funnel-tam">
+        <div class="funnel-label">Total Addressable Market</div>
+        <div class="funnel-abbr">TAM</div>
+        <div class="funnel-amount">$40B</div>
+        <p class="funnel-desc" data-i18n="tam.desc"></p>
+      </div>
+      <div class="funnel-card funnel-sam">
+        <div class="funnel-label">Serviceable Available Market</div>
+        <div class="funnel-abbr">SAM</div>
+        <div class="funnel-amount">$8B</div>
+        <p class="funnel-desc" data-i18n="sam.desc"></p>
+        <p style="font-size:.7rem;color:var(--text-dim);margin-top:.75rem" data-i18n="sam.source"></p>
+      </div>
+      <div class="funnel-card funnel-som">
+        <div class="funnel-label">Serviceable Obtainable Market</div>
+        <div class="funnel-abbr">SOM</div>
+        <div class="funnel-amount">$50–200M</div>
+        <p class="funnel-desc" data-i18n="som.desc"></p>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:2rem">
+      <h3 style="font-size:1rem;color:var(--white);margin-bottom:1rem" data-i18n="market.tiers.title"></h3>
+      <div class="tier-grid">
+        <div class="tier-card"><div class="tier-num" data-i18n="t1.num"></div><div class="tier-name" data-i18n="t1.name"></div><p class="tier-desc" data-i18n="t1.desc"></p><div class="tier-price" data-i18n="t1.price"></div></div>
+        <div class="tier-card"><div class="tier-num" data-i18n="t2.num"></div><div class="tier-name" data-i18n="t2.name"></div><p class="tier-desc" data-i18n="t2.desc"></p><div class="tier-price" data-i18n="t2.price"></div></div>
+        <div class="tier-card"><div class="tier-num" data-i18n="t3.num"></div><div class="tier-name" data-i18n="t3.name"></div><p class="tier-desc" data-i18n="t3.desc"></p><div class="tier-price" data-i18n="t3.price"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Milestones -->
+<section id="milestones">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="ms.label"></div>
+      <h2 class="section-title" data-i18n="ms.title"></h2>
+      <p class="section-desc" data-i18n="ms.desc"></p>
+    </div>
+    <div class="milestones-inner reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem">
+      <div>
+        <h3 style="font-size:.875rem;color:var(--cyan);margin-bottom:1.5rem;letter-spacing:.06em;text-transform:uppercase" data-i18n="ms.short.title"></h3>
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot active"></div><div class="tl-date">Q2 2026</div><div class="tl-title" data-i18n="tl.1.title"></div><p class="tl-desc" data-i18n="tl.1.desc"></p></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">Q3 2026</div><div class="tl-title" data-i18n="tl.2.title"></div><p class="tl-desc" data-i18n="tl.2.desc"></p></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">Q4 2026</div><div class="tl-title" data-i18n="tl.3.title"></div><p class="tl-desc" data-i18n="tl.3.desc"></p></div>
+          <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">Q1 2027</div><div class="tl-title" data-i18n="tl.4.title"></div><p class="tl-desc" data-i18n="tl.4.desc"></p></div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:.875rem;color:var(--teal);margin-bottom:1.5rem;letter-spacing:.06em;text-transform:uppercase" data-i18n="ms.long.title"></h3>
+        <div style="display:grid;gap:1rem">
+          <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.1.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.1.desc"></p></div>
+          <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.2.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.2.desc"></p></div>
+          <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.3.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.3.desc"></p></div>
+          <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.4.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.4.desc"></p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Partners -->
+<section id="partners">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label" data-i18n="partners.label"></div>
+      <h2 class="section-title" data-i18n="partners.title"></h2>
+    </div>
+    <div class="reveal" style="margin-top:2rem">
+      <h3 style="font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:1rem" data-i18n="partners.collab"></h3>
+      <div class="partner-row">
+        <span class="partner-tag">AuroraEpitope Limited</span>
+        <span class="partner-tag" data-i18n="pt.cuhk"></span>
+        <span class="partner-tag">AstraZeneca</span>
+        <span class="partner-tag" data-i18n="pt.wh"></span>
+        <span class="partner-tag" data-i18n="pt.cityu"></span>
+        <span class="partner-tag" data-i18n="pt.pku"></span>
+        <span class="partner-tag" data-i18n="pt.nus"></span>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:2.5rem">
+      <h3 style="font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:1rem" data-i18n="partners.honors"></h3>
+      <div class="award-grid">
+        <div class="award-card"><div class="award-icon">🏆</div><div><div class="award-title" data-i18n="aw.1.title"></div><p class="award-desc" data-i18n="aw.1.desc"></p></div></div>
+        <div class="award-card"><div class="award-icon">🎓</div><div><div class="award-title" data-i18n="aw.2.title"></div><p class="award-desc" data-i18n="aw.2.desc"></p></div></div>
+        <div class="award-card"><div class="award-icon">📜</div><div><div class="award-title" data-i18n="aw.3.title"></div><p class="award-desc" data-i18n="aw.3.desc"></p></div></div>
+        <div class="award-card"><div class="award-icon">🔬</div><div><div class="award-title" data-i18n="aw.4.title"></div><p class="award-desc" data-i18n="aw.4.desc"></p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Contact -->
+<section id="contact">
+  <div class="container">
+    <div class="contact-inner reveal">
+      <div class="section-label" data-i18n="contact.label"></div>
+      <h2 class="section-title" data-i18n="contact.title"></h2>
+      <p class="section-desc" style="margin:0 auto" data-i18n="contact.desc"></p>
+      <div class="contact-info">
+        <div class="contact-item"><span>🏛️</span><span>CUHK Innoport, Hong Kong</span></div>
+        <div class="contact-item"><span>🤝</span><span>CUHK × AuroraEpitope</span></div>
+        <div class="contact-item"><span>👤</span><span data-i18n="contact.ceo"></span></div>
+      </div>
+      <div style="margin-top:2.5rem"><a href="#problem" class="btn btn-primary" style="font-size:1rem;padding:.875rem 2.5rem" data-i18n="contact.cta"></a></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>EpitopeRank</strong> — Ranking the Unseen &nbsp;|&nbsp; AI-Powered Neoantigen Ranking Engine</p>
+  <p style="margin-top:.5rem" data-i18n="footer.copy"></p>
+</footer>
+
+<script>
+// ── Translations ─────────────────────────────────────────────────────────────
+const T = {
+'zh-CN':{
+  'nav.problem':'问题','nav.solution':'方案','nav.technology':'技术','nav.team':'团队',
+  'nav.market':'市场','nav.milestones':'路线','nav.partners':'合作伙伴','nav.contact':'联系',
+  'hero.badge':'AI · 新抗原 · 精准免疫治疗',
+  'hero.sub':'基于知识图谱的新抗原多证据融合优选引擎',
+  'hero.tagline':'Ranking the Unseen · AI-Powered Neoantigen Ranking Engine',
+  'hero.cta.learn':'了解方案','hero.cta.contact':'联系我们',
+  'stats.tcell':'T细胞响应率（体内验证）',
+  'stats.evidence.num':'5类','stats.evidence.label':'异构证据源融合',
+  'stats.patent.num':'2项','stats.patent.label':'美国专利已授权',
+  'stats.topk':'重新定义优选目标指标','stats.market':'可触达市场规模',
+  'problem.label':'问题与痛点',
+  'problem.title':'现有新抗原工具<br>为何无法满足临床需求？',
+  'problem.desc':'当前预测工具的优化目标与临床真实需求存在根本性偏差——它们追求预测精度，而临床需要的是「选得对」。',
+  'p1.title':'优化目标错位',
+  'p1.text':'现有工具以 AUC / 预测准确率为目标，但临床真实需求是从数千候选表位中筛选出最可能验证成功的 Top-K。「预测准」≠「选得对」，本质上是不同的任务。',
+  'p1.stat':'范式级差距：从分类模型 → 决策支持系统',
+  'p2.title':'证据孤岛',
+  'p2.text':'MS免疫肽组学、TCR克隆型测序、ELISpot/ICS功能实验、文献知识、计算预测分数——5类关键证据各自孤立，没有统一框架将它们整合排序。',
+  'p2.stat':'5类数据源无法在同一框架内统一比较',
+  'p3.title':'不确定性被忽略',
+  'p3.text':'所有现有工具仅输出确定性分数，无置信区间与校准概率。缺失模态时性能骤降，且缺乏主动学习机制，无法从湿实验反馈中持续自我优化。',
+  'p3.stat':'参考：TESLA Consortium, Cell 2020 · NeoDisc, Nat Biotech 2024',
+  'problem.insight':'💡 核心洞察：新抗原领域需要一个「决策支持系统」，而非又一个「预测模型」。EpitopeRank 正是为此而生。',
+  'solution.label':'解决方案',
+  'solution.title':'检索 → 排序 → 重排<br>三阶段推荐系统范式',
+  'solution.desc':'EpitopeRank 率先将「推荐系统范式」引入新抗原领域，整合五类异构证据，以知识图谱为核心驱动，从数千候选精准优选 Top-K。',
+  'pipe1.cn':'检索召回','pipe1.li1':'从全量候选池快速筛出潜力候选','pipe1.li2':'覆盖所有5类证据源','pipe1.li3':'广度优先策略','pipe1.li4':'数千 → 数百','pipe1.tag':'广度优先',
+  'pipe2.cn':'粗排序','pipe2.li1':'多源预测分数融合','pipe2.li2':'HLA等位基因限制性加权','pipe2.li3':'Level A–D 证据层级驱动','pipe2.li4':'数百 → 数十','pipe2.tag':'多证据融合',
+  'pipe3.cn':'精细重排','pipe3.li1':'异构图神经网络特征','pipe3.li2':'不确定性估计 + 置信度校准','pipe3.li3':'输出最终 Top-K 候选','pipe3.li4':'数十 → Top-K','pipe3.tag':'深度精排',
+  'solution.loop':'🔄 闭环主动学习：Wet-lab 验证结果 → 自动回流 → 模型更新 → 下一轮精度持续提升',
+  'tech.label':'核心技术',
+  'tech.title':'知识图谱 × 证据层级<br>× 异构图神经网络',
+  'tech.desc':'六大技术创新点构建全方位技术壁垒，聚焦亚洲人群高频等位基因 HLA-A*24:02。',
+  'tech.kg.title':'⬡ 知识图谱 — 5类节点',
+  'tech.kg.node3':'Sample / Donor','tech.kg.node4':'Study / Publication',
+  'tech.kg.edges':'边类型：binds_to · presented_in · recognized_by · reported_in · co_occurs_in',
+  'tech.inno.title':'🚀 六大创新点',
+  'inno.1':'任务重定义：AUC → Top-K实验命中率（范式转换）',
+  'inno.2':'推荐系统架构：检索→排序→重排（率先引入）',
+  'inno.3':'证据层级显式化：Level A→D 驱动融合权重',
+  'inno.4':'异构图神经网络：5节点 > UniPMT的3节点',
+  'inno.5':'不确定性估计+校准：首批提供置信区间的工具',
+  'inno.6':'闭环主动学习：湿实验反馈→模型自更新',
+  'tech.evidence.title':'📊 证据层级 (Evidence Hierarchy)',
+  'ev.th1':'级别','ev.th2':'类型','ev.th3':'来源',
+  'ev.a.type':'强实验验证','ev.a.src':'MS呈递 / ELISpot+ / Tetramer',
+  'ev.b.type':'功能验证','ev.b.src':'ICS细胞因子 / TCR-pHLA结合',
+  'ev.c.type':'结构化弱证据','ev.c.src':'IEDB记录 / 计算预测分 / 共现',
+  'ev.d.type':'不确定/冲突','ev.d.src':'文本挖掘未校验 / 多源矛盾',
+  'tech.hla.title':'🎯 亚洲人群聚焦',
+  'tech.hla.text':'优先支持 <strong style="color:var(--cyan)">HLA-A*24:02</strong> — 亚洲人群最高频等位基因（频率约55%），填补现有工具对亚洲患者支持不足的空白。可扩展至 HLA-A*02:01 等其他高频等位基因。',
+  'tech.patent':'🔒 技术壁垒：基于 AuroraEpitope 2项已授权美国专利（非经典新抗原发现相关），独家授权合作关系',
+  'team.label':'核心团队','team.title':'跨学科精英团队',
+  'team.desc':'算法 × 实验生物学 × 生物统计学——三位一体的互补型核心团队，全面覆盖从AI到临床转化的完整能力链。',
+  'm1.bio':'前BGI Research研究员（4年+），CUHK医学院在读博士。MHC结合预测与深度学习专家，发表论文于Cell Reports Medicine、npj Precision Oncology等顶刊，Google Scholar引用1,000+，h-index≈16。',
+  'm2.name':'钟明','m2.role':'Experimental Biology Lead',
+  'm2.bio':'华西医院国家重点实验室科研助理，CAR-T与NK细胞治疗领域专家。深度参与肿瘤免疫实验平台建设，负责EpitopeRank体外验证体系构建。',
+  'm3.name':'王婷彧','m3.role':'Bioinformatics & Data Lead',
+  'm3.bio':'香港城市大学生物统计学硕士，单细胞组学与空间转录组学专家。精通Python、R及多组学数据整合分析，负责知识图谱数据管道构建。',
+  'advisors.title':'科学顾问团',
+  'adv.1.inst':'香港中文大学（CUHK）','adv.1.role':'首席学术顾问',
+  'adv.2.role':'产业顾问 / CEO',
+  'adv.3.name':'詹启敏 院士','adv.3.inst':'北京大学（PKU）','adv.3.role':'荣誉顾问',
+  'adv.4.inst':'新加坡国立大学（NUS）','adv.4.role':'AI / ML 顾问',
+  'adv.5.role':'制药行业顾问',
+  'adv.6.inst':'北京大学（PKU）','adv.6.role':'免疫学顾问',
+  'market.label':'市场分析','market.title':'千亿赛道，亚洲人群蓝海',
+  'market.desc':'全球癌症免疫治疗市场高速增长，亚洲人群HLA适配工具严重稀缺，形成独特的市场切入点。',
+  'tam.desc':'全球癌症疫苗/免疫治疗市场（含经典+非经典新抗原），覆盖胰腺癌、黑色素瘤、肺癌、乳腺癌等主要适应症',
+  'sam.desc':'非经典新抗原发现服务市场，AI驱动的表位优选工具/SaaS，目标用户：生物制药公司、CRO/CDMO机构',
+  'sam.source':'数据来源：Grand View Research 2024 · Precedence Statistics',
+  'som.desc':'亚洲人群（HLA-A*24:02优先）初期聚焦：胰腺癌+乳腺癌企业授权 + SaaS订阅数据库（Y3目标）',
+  'market.tiers.title':'目标客户分层',
+  't1.num':'Tier 1 — 战略合作伙伴','t1.name':'大型药企','t1.desc':'AstraZeneca、Novartis 等，深度技术整合，长期合作授权','t1.price':'企业授权 $5M–$30M + 3–8% Royalty',
+  't2.num':'Tier 2 — SaaS 订阅客户','t2.name':'中型 Biotech / CRO','t2.desc':'中型生物技术公司、合同研究机构、学术机构','t2.price':'年费 $50K–$100K / 数据库许可',
+  't3.num':'Tier 3 — 按次服务','t3.name':'小型实验室 / 初创','t3.desc':'小型研究实验室、初创公司，弹性按需使用','t3.price':'$5K–$10K / run',
+  'ms.label':'发展路线 & 里程碑','ms.title':'清晰的发展路径','ms.desc':'从算法验证到商业化落地，分阶段稳步推进。',
+  'ms.short.title':'🎯 短期里程碑 (2026–2027)','ms.long.title':'🌟 中长期愿景 (2028–2030+)',
+  'tl.1.title':'挑战杯参赛 + PI Centre申请','tl.1.desc':'挑战杯创业计划类参赛；PI Centre第23轮申请（截止4月30日）',
+  'tl.2.title':'核心算法论文投稿','tl.2.desc':'目标：Nature Communications / Nature Machine Intelligence',
+  'tl.3.title':'POC 验证协议签署','tl.3.desc':'与 2–3 家药企签署概念验证合作协议',
+  'tl.4.title':'种子轮融资 + 验证队列建立','tl.4.desc':'建立亚洲人群 HLA-A*24:02 验证队列；种子轮融资交割',
+  'lt.1.title':'★ 亚洲领导者','lt.1.desc':'成为亚洲新抗原AI优选领域领导者，年服务企业客户 ≥ 30 家',
+  'lt.2.title':'★ 全球扩张','lt.2.desc':'拓展至 HLA-A*02:01 及其他高频等位基因，覆盖全球主要人群',
+  'lt.3.title':'★ 监管路径对接','lt.3.desc':'与 FDA/EMA 监管路径对接，推动首个 EpitopeRank 优选疫苗进入临床',
+  'lt.4.title':'★ 适应症扩展','lt.4.desc':'技术平台延伸至感染性疾病、自身免疫病等新适应症',
+  'partners.label':'合作伙伴与荣誉','partners.title':'强强联合，生态共建',
+  'partners.collab':'技术与行业合作','partners.honors':'荣誉与认可',
+  'pt.cuhk':'香港中文大学 CUHK','pt.wh':'华西医院国家重点实验室','pt.cityu':'香港城市大学 CityU','pt.pku':'北京大学 PKU','pt.nus':'新加坡国立大学 NUS',
+  'aw.1.title':'PI Centre 申请（第23轮）','aw.1.desc':'香港PI Centre创业加速计划，非稀释融资最高 HKD $6M（4年分期）',
+  'aw.2.title':'第12届挑战杯参赛','aw.2.desc':'香港大学生创新创业大赛，创业计划类 | 医疗/生物科技赛道',
+  'aw.3.title':'2项美国专利已授权','aw.3.desc':'非经典新抗原发现相关技术，AuroraEpitope 独家授权合作',
+  'aw.4.title':'AuroraEpitope 联合体','aw.4.desc':'依托 AuroraEpitope 实验验证平台，48%–70% T细胞响应率体内验证支撑',
+  'contact.label':'联系我们','contact.title':'探索合作可能',
+  'contact.desc':'无论是技术授权、数据合作还是投资洽谈，欢迎与我们联系。',
+  'contact.ceo':'王子玮 (CEO) · Ziwei Wang','contact.cta':'了解 EpitopeRank',
+  'footer.copy':'© 2026 EpitopeRank · CUHK × AuroraEpitope Limited · 基于知识图谱的新抗原多证据融合优选引擎'
+},
+
+'zh-TW':{
+  'nav.problem':'問題','nav.solution':'方案','nav.technology':'技術','nav.team':'團隊',
+  'nav.market':'市場','nav.milestones':'路線','nav.partners':'合作夥伴','nav.contact':'聯繫',
+  'hero.badge':'AI · 新抗原 · 精準免疫治療',
+  'hero.sub':'基於知識圖譜的新抗原多證據融合優選引擎',
+  'hero.tagline':'Ranking the Unseen · AI-Powered Neoantigen Ranking Engine',
+  'hero.cta.learn':'了解方案','hero.cta.contact':'聯繫我們',
+  'stats.tcell':'T細胞響應率（體內驗證）',
+  'stats.evidence.num':'5類','stats.evidence.label':'異構證據源融合',
+  'stats.patent.num':'2項','stats.patent.label':'美國專利已授權',
+  'stats.topk':'重新定義優選目標指標','stats.market':'可觸達市場規模',
+  'problem.label':'問題與痛點',
+  'problem.title':'現有新抗原工具<br>為何無法滿足臨床需求？',
+  'problem.desc':'當前預測工具的優化目標與臨床真實需求存在根本性偏差——它們追求預測精度，而臨床需要的是「選得對」。',
+  'p1.title':'優化目標錯位',
+  'p1.text':'現有工具以 AUC / 預測準確率為目標，但臨床真實需求是從數千候選表位中篩選出最可能驗證成功的 Top-K。「預測準」≠「選得對」，本質上是不同的任務。',
+  'p1.stat':'範式級差距：從分類模型 → 決策支持系統',
+  'p2.title':'證據孤島',
+  'p2.text':'MS免疫肽組學、TCR克隆型測序、ELISpot/ICS功能實驗、文獻知識、計算預測分數——5類關鍵證據各自孤立，沒有統一框架將它們整合排序。',
+  'p2.stat':'5類資料源無法在同一框架內統一比較',
+  'p3.title':'不確定性被忽略',
+  'p3.text':'所有現有工具僅輸出確定性分數，無置信區間與校準概率。缺失模態時性能驟降，且缺乏主動學習機制，無法從濕實驗反饋中持續自我優化。',
+  'p3.stat':'參考：TESLA Consortium, Cell 2020 · NeoDisc, Nat Biotech 2024',
+  'problem.insight':'💡 核心洞察：新抗原領域需要一個「決策支持系統」，而非又一個「預測模型」。EpitopeRank 正是為此而生。',
+  'solution.label':'解決方案',
+  'solution.title':'檢索 → 排序 → 重排<br>三階段推薦系統範式',
+  'solution.desc':'EpitopeRank 率先將「推薦系統範式」引入新抗原領域，整合五類異構證據，以知識圖譜為核心驅動，從數千候選精準優選 Top-K。',
+  'pipe1.cn':'檢索召回','pipe1.li1':'從全量候選池快速篩出潛力候選','pipe1.li2':'覆蓋所有5類證據源','pipe1.li3':'廣度優先策略','pipe1.li4':'數千 → 數百','pipe1.tag':'廣度優先',
+  'pipe2.cn':'粗排序','pipe2.li1':'多源預測分數融合','pipe2.li2':'HLA等位基因限制性加權','pipe2.li3':'Level A–D 證據層級驅動','pipe2.li4':'數百 → 數十','pipe2.tag':'多證據融合',
+  'pipe3.cn':'精細重排','pipe3.li1':'異構圖神經網絡特徵','pipe3.li2':'不確定性估計 + 置信度校準','pipe3.li3':'輸出最終 Top-K 候選','pipe3.li4':'數十 → Top-K','pipe3.tag':'深度精排',
+  'solution.loop':'🔄 閉環主動學習：Wet-lab 驗證結果 → 自動回流 → 模型更新 → 下一輪精度持續提升',
+  'tech.label':'核心技術',
+  'tech.title':'知識圖譜 × 證據層級<br>× 異構圖神經網絡',
+  'tech.desc':'六大技術創新點構建全方位技術壁壘，聚焦亞洲人群高頻等位基因 HLA-A*24:02。',
+  'tech.kg.title':'⬡ 知識圖譜 — 5類節點',
+  'tech.kg.node3':'Sample / Donor','tech.kg.node4':'Study / Publication',
+  'tech.kg.edges':'邊類型：binds_to · presented_in · recognized_by · reported_in · co_occurs_in',
+  'tech.inno.title':'🚀 六大創新點',
+  'inno.1':'任務重定義：AUC → Top-K實驗命中率（範式轉換）',
+  'inno.2':'推薦系統架構：檢索→排序→重排（率先引入）',
+  'inno.3':'證據層級顯式化：Level A→D 驅動融合權重',
+  'inno.4':'異構圖神經網絡：5節點 > UniPMT的3節點',
+  'inno.5':'不確定性估計+校準：首批提供置信區間的工具',
+  'inno.6':'閉環主動學習：濕實驗反饋→模型自更新',
+  'tech.evidence.title':'📊 證據層級 (Evidence Hierarchy)',
+  'ev.th1':'級別','ev.th2':'類型','ev.th3':'來源',
+  'ev.a.type':'強實驗驗證','ev.a.src':'MS呈遞 / ELISpot+ / Tetramer',
+  'ev.b.type':'功能驗證','ev.b.src':'ICS細胞因子 / TCR-pHLA結合',
+  'ev.c.type':'結構化弱證據','ev.c.src':'IEDB記錄 / 計算預測分 / 共現',
+  'ev.d.type':'不確定/衝突','ev.d.src':'文本挖掘未校驗 / 多源矛盾',
+  'tech.hla.title':'🎯 亞洲人群聚焦',
+  'tech.hla.text':'優先支持 <strong style="color:var(--cyan)">HLA-A*24:02</strong> — 亞洲人群最高頻等位基因（頻率約55%），填補現有工具對亞洲患者支持不足的空白。可擴展至 HLA-A*02:01 等其他高頻等位基因。',
+  'tech.patent':'🔒 技術壁壘：基於 AuroraEpitope 2項已授權美國專利（非經典新抗原發現相關），獨家授權合作關係',
+  'team.label':'核心團隊','team.title':'跨學科精英團隊',
+  'team.desc':'算法 × 實驗生物學 × 生物統計學——三位一體的互補型核心團隊，全面覆蓋從AI到臨床轉化的完整能力鏈。',
+  'm1.bio':'前BGI Research研究員（4年+），CUHK醫學院在讀博士。MHC結合預測與深度學習專家，發表論文於Cell Reports Medicine、npj Precision Oncology等頂刊，Google Scholar引用1,000+，h-index≈16。',
+  'm2.name':'鐘明','m2.role':'Experimental Biology Lead',
+  'm2.bio':'華西醫院國家重點實驗室科研助理，CAR-T與NK細胞治療領域專家。深度參與腫瘤免疫實驗平台建設，負責EpitopeRank體外驗證體系構建。',
+  'm3.name':'王婷彧','m3.role':'Bioinformatics & Data Lead',
+  'm3.bio':'香港城市大學生物統計學碩士，單細胞組學與空間轉錄組學專家。精通Python、R及多組學資料整合分析，負責知識圖譜資料管道構建。',
+  'advisors.title':'科學顧問團',
+  'adv.1.inst':'香港中文大學（CUHK）','adv.1.role':'首席學術顧問',
+  'adv.2.role':'產業顧問 / CEO',
+  'adv.3.name':'詹啟敏 院士','adv.3.inst':'北京大學（PKU）','adv.3.role':'榮譽顧問',
+  'adv.4.inst':'新加坡國立大學（NUS）','adv.4.role':'AI / ML 顧問',
+  'adv.5.role':'製藥行業顧問',
+  'adv.6.inst':'北京大學（PKU）','adv.6.role':'免疫學顧問',
+  'market.label':'市場分析','market.title':'千億賽道，亞洲人群藍海',
+  'market.desc':'全球癌症免疫治療市場高速增長，亞洲人群HLA適配工具嚴重稀缺，形成獨特的市場切入點。',
+  'tam.desc':'全球癌症疫苗/免疫治療市場（含經典+非經典新抗原），覆蓋胰腺癌、黑色素瘤、肺癌、乳腺癌等主要適應症',
+  'sam.desc':'非經典新抗原發現服務市場，AI驅動的表位優選工具/SaaS，目標用戶：生物製藥公司、CRO/CDMO機構',
+  'sam.source':'資料來源：Grand View Research 2024 · Precedence Statistics',
+  'som.desc':'亞洲人群（HLA-A*24:02優先）初期聚焦：胰腺癌+乳腺癌企業授權 + SaaS訂閱資料庫（Y3目標）',
+  'market.tiers.title':'目標客戶分層',
+  't1.num':'Tier 1 — 戰略合作夥伴','t1.name':'大型藥企','t1.desc':'AstraZeneca、Novartis 等，深度技術整合，長期合作授權','t1.price':'企業授權 $5M–$30M + 3–8% Royalty',
+  't2.num':'Tier 2 — SaaS 訂閱客戶','t2.name':'中型 Biotech / CRO','t2.desc':'中型生物技術公司、合同研究機構、學術機構','t2.price':'年費 $50K–$100K / 資料庫許可',
+  't3.num':'Tier 3 — 按次服務','t3.name':'小型實驗室 / 初創','t3.desc':'小型研究實驗室、初創公司，彈性按需使用','t3.price':'$5K–$10K / run',
+  'ms.label':'發展路線 & 里程碑','ms.title':'清晰的發展路徑','ms.desc':'從算法驗證到商業化落地，分階段穩步推進。',
+  'ms.short.title':'🎯 短期里程碑 (2026–2027)','ms.long.title':'🌟 中長期願景 (2028–2030+)',
+  'tl.1.title':'挑戰杯參賽 + PI Centre申請','tl.1.desc':'挑戰杯創業計劃類參賽；PI Centre第23輪申請（截止4月30日）',
+  'tl.2.title':'核心算法論文投稿','tl.2.desc':'目標：Nature Communications / Nature Machine Intelligence',
+  'tl.3.title':'POC 驗證協議簽署','tl.3.desc':'與 2–3 家藥企簽署概念驗證合作協議',
+  'tl.4.title':'種子輪融資 + 驗證隊列建立','tl.4.desc':'建立亞洲人群 HLA-A*24:02 驗證隊列；種子輪融資交割',
+  'lt.1.title':'★ 亞洲領導者','lt.1.desc':'成為亞洲新抗原AI優選領域領導者，年服務企業客戶 ≥ 30 家',
+  'lt.2.title':'★ 全球擴張','lt.2.desc':'拓展至 HLA-A*02:01 及其他高頻等位基因，覆蓋全球主要人群',
+  'lt.3.title':'★ 監管路徑對接','lt.3.desc':'與 FDA/EMA 監管路徑對接，推動首個 EpitopeRank 優選疫苗進入臨床',
+  'lt.4.title':'★ 適應症擴展','lt.4.desc':'技術平台延伸至感染性疾病、自身免疫病等新適應症',
+  'partners.label':'合作夥伴與榮譽','partners.title':'強強聯合，生態共建',
+  'partners.collab':'技術與行業合作','partners.honors':'榮譽與認可',
+  'pt.cuhk':'香港中文大學 CUHK','pt.wh':'華西醫院國家重點實驗室','pt.cityu':'香港城市大學 CityU','pt.pku':'北京大學 PKU','pt.nus':'新加坡國立大學 NUS',
+  'aw.1.title':'PI Centre 申請（第23輪）','aw.1.desc':'香港PI Centre創業加速計劃，非稀釋融資最高 HKD $6M（4年分期）',
+  'aw.2.title':'第12屆挑戰杯參賽','aw.2.desc':'香港大學生創新創業大賽，創業計劃類 | 醫療/生物科技賽道',
+  'aw.3.title':'2項美國專利已授權','aw.3.desc':'非經典新抗原發現相關技術，AuroraEpitope 獨家授權合作',
+  'aw.4.title':'AuroraEpitope 聯合體','aw.4.desc':'依託 AuroraEpitope 實驗驗證平台，48%–70% T細胞響應率體內驗證支撐',
+  'contact.label':'聯繫我們','contact.title':'探索合作可能',
+  'contact.desc':'無論是技術授權、資料合作還是投資洽談，歡迎與我們聯繫。',
+  'contact.ceo':'王子玮 (CEO) · Ziwei Wang','contact.cta':'了解 EpitopeRank',
+  'footer.copy':'© 2026 EpitopeRank · CUHK × AuroraEpitope Limited · 基於知識圖譜的新抗原多證據融合優選引擎'
+},
+
+'en':{
+  'nav.problem':'Problem','nav.solution':'Solution','nav.technology':'Technology','nav.team':'Team',
+  'nav.market':'Market','nav.milestones':'Roadmap','nav.partners':'Partners','nav.contact':'Contact',
+  'hero.badge':'AI · Neoantigen · Precision Immunotherapy',
+  'hero.sub':'Knowledge Graph-Driven Multi-Evidence Neoantigen Ranking Engine',
+  'hero.tagline':'Ranking the Unseen · AI-Powered Neoantigen Ranking Engine',
+  'hero.cta.learn':'Learn More','hero.cta.contact':'Contact Us',
+  'stats.tcell':'T Cell Response Rate (In Vivo)',
+  'stats.evidence.num':'5','stats.evidence.label':'Heterogeneous Evidence Sources',
+  'stats.patent.num':'2','stats.patent.label':'US Patents Granted',
+  'stats.topk':'Redefining the Ranking Metric','stats.market':'Total Addressable Market',
+  'problem.label':'Problem & Pain Points',
+  'problem.title':'Why Current Neoantigen Tools<br>Fail to Meet Clinical Needs?',
+  'problem.desc':'Existing prediction tools are fundamentally misaligned with clinical reality — they optimize for prediction accuracy, while clinicians need tools that select the right candidates.',
+  'p1.title':'Misaligned Optimization Objective',
+  'p1.text':'Existing tools optimize for AUC / prediction accuracy, but the real clinical need is to identify the Top-K candidates most likely to succeed in experimental validation from thousands of options. "Predicting accurately" ≠ "Selecting correctly" — these are fundamentally different tasks.',
+  'p1.stat':'Paradigm gap: from classifier → decision support system',
+  'p2.title':'Evidence Silos',
+  'p2.text':'MS immunopeptidomics, TCR clonotyping, ELISpot/ICS assays, literature knowledge, and computational scores — 5 critical evidence types remain isolated with no unified framework to integrate and rank them together.',
+  'p2.stat':'5 data types cannot be uniformly compared within one framework',
+  'p3.title':'Uncertainty Ignored',
+  'p3.text':'All current tools output only deterministic scores with no confidence intervals or calibration. Performance degrades sharply with missing modalities, and there is no active learning mechanism to continuously improve from wet-lab feedback.',
+  'p3.stat':'Ref: TESLA Consortium, Cell 2020 · NeoDisc, Nat Biotech 2024',
+  'problem.insight':'💡 Key Insight: The neoantigen field needs a "decision support system," not just another prediction model. EpitopeRank was built precisely for this.',
+  'solution.label':'Solution',
+  'solution.title':'Retrieve → Rank → Rerank<br>Three-Stage Recommendation Paradigm',
+  'solution.desc':'EpitopeRank is the first to bring the recommendation system paradigm to neoantigen ranking, integrating five heterogeneous evidence types through a knowledge graph-driven engine to identify Top-K candidates from thousands.',
+  'pipe1.cn':'Retrieval','pipe1.li1':'Rapidly screen potential candidates from the full pool','pipe1.li2':'Covers all 5 evidence source types','pipe1.li3':'Breadth-first strategy','pipe1.li4':'Thousands → Hundreds','pipe1.tag':'Breadth-First',
+  'pipe2.cn':'Coarse Ranking','pipe2.li1':'Multi-source prediction score fusion','pipe2.li2':'HLA allele restriction weighting','pipe2.li3':'Level A–D evidence hierarchy-driven','pipe2.li4':'Hundreds → Tens','pipe2.tag':'Multi-Evidence Fusion',
+  'pipe3.cn':'Fine Re-ranking','pipe3.li1':'Heterogeneous graph neural network features','pipe3.li2':'Uncertainty estimation + confidence calibration','pipe3.li3':'Output final Top-K candidates','pipe3.li4':'Tens → Top-K','pipe3.tag':'Deep Precision',
+  'solution.loop':'🔄 Closed-loop active learning: Wet-lab results → Auto feedback → Model update → Continuously improving accuracy',
+  'tech.label':'Core Technology',
+  'tech.title':'Knowledge Graph × Evidence Hierarchy<br>× Heterogeneous GNN',
+  'tech.desc':'Six key technical innovations build comprehensive barriers to entry, with a focused initial deployment on HLA-A*24:02 for Asian populations.',
+  'tech.kg.title':'⬡ Knowledge Graph — 5 Node Types',
+  'tech.kg.node3':'Sample / Donor','tech.kg.node4':'Study / Publication',
+  'tech.kg.edges':'Edge types: binds_to · presented_in · recognized_by · reported_in · co_occurs_in',
+  'tech.inno.title':'🚀 Six Key Innovations',
+  'inno.1':'Task redefinition: AUC → Top-K experimental hit rate (paradigm shift)',
+  'inno.2':'Recommendation system architecture: Retrieve→Rank→Rerank (first in field)',
+  'inno.3':'Explicit evidence hierarchy: Level A→D driving fusion weights',
+  'inno.4':'Heterogeneous GNN: 5 node types vs. UniPMT\'s 3',
+  'inno.5':'Uncertainty estimation + calibration: among first tools to provide confidence intervals',
+  'inno.6':'Closed-loop active learning: wet-lab feedback → model self-update',
+  'tech.evidence.title':'📊 Evidence Hierarchy',
+  'ev.th1':'Level','ev.th2':'Type','ev.th3':'Sources',
+  'ev.a.type':'Strong Experimental','ev.a.src':'MS presentation / ELISpot+ / Tetramer',
+  'ev.b.type':'Functional Validation','ev.b.src':'ICS cytokine assay / TCR-pHLA binding',
+  'ev.c.type':'Weak Structured','ev.c.src':'IEDB records / Computational scores / Co-occurrence',
+  'ev.d.type':'Uncertain / Conflicting','ev.d.src':'Unvalidated text mining / Multi-source conflicts',
+  'tech.hla.title':'🎯 Asian Population Focus',
+  'tech.hla.text':'Primary support for <strong style="color:var(--cyan)">HLA-A*24:02</strong> — the highest-frequency allele in Asian populations (~55%), addressing a critical gap in tools supporting Asian patients. Expandable to HLA-A*02:01 and other high-frequency alleles.',
+  'tech.patent':'🔒 IP Moat: Built on 2 granted US patents from AuroraEpitope (non-canonical neoantigen discovery), with exclusive licensing partnership',
+  'team.label':'Core Team','team.title':'Multidisciplinary Elite Team',
+  'team.desc':'Algorithm × Experimental Biology × Biostatistics — a complementary trio covering the complete capability chain from AI to clinical translation.',
+  'm1.bio':'Former researcher at BGI Research (4+ years), PhD candidate at CUHK Faculty of Medicine. Expert in MHC binding prediction and deep learning. Published in Cell Reports Medicine, npj Precision Oncology (Nature journal), and more. Google Scholar citations 1,000+, h-index ≈16.',
+  'm2.name':'Ming Zhong','m2.role':'Experimental Biology Lead',
+  'm2.bio':'Research associate at West China Hospital National Key Laboratory. Expert in CAR-T and NK cell therapy. Leads EpitopeRank\'s in vitro validation platform construction.',
+  'm3.name':'Tingyu Wang','m3.role':'Bioinformatics & Data Lead',
+  'm3.bio':'MSc in Biostatistics from City University of Hong Kong. Expert in single-cell omics and spatial transcriptomics. Proficient in Python, R, and multi-omics data integration. Leads knowledge graph data pipeline construction.',
+  'advisors.title':'Scientific Advisory Board',
+  'adv.1.inst':'The Chinese University of Hong Kong (CUHK)','adv.1.role':'Chief Academic Advisor',
+  'adv.2.role':'Industry Advisor / CEO',
+  'adv.3.name':'Prof. Qimin Zhan (Academician)','adv.3.inst':'Peking University (PKU)','adv.3.role':'Honorary Advisor',
+  'adv.4.inst':'National University of Singapore (NUS)','adv.4.role':'AI / ML Advisor',
+  'adv.5.role':'Pharma Industry Advisor',
+  'adv.6.inst':'Peking University (PKU)','adv.6.role':'Immunology Advisor',
+  'market.label':'Market Analysis','market.title':'$40B Opportunity, Asian Market Blue Ocean',
+  'market.desc':'The global cancer immunotherapy market is growing rapidly, while HLA-matched tools for Asian populations remain critically scarce — creating a unique market entry point.',
+  'tam.desc':'Global cancer vaccine / immunotherapy market (canonical + non-canonical neoantigen), covering pancreatic cancer, melanoma, lung cancer, breast cancer, and other indications',
+  'sam.desc':'Non-canonical neoantigen discovery service market — AI-driven epitope ranking tools/SaaS targeting biopharmaceutical companies, CRO/CDMO organizations',
+  'sam.source':'Source: Grand View Research 2024 · Precedence Statistics',
+  'som.desc':'Asian population focus (HLA-A*24:02 priority): pancreatic + breast cancer enterprise licensing + SaaS database subscriptions (Y3 target)',
+  'market.tiers.title':'Target Customer Segments',
+  't1.num':'Tier 1 — Strategic Partners','t1.name':'Large Pharma','t1.desc':'AstraZeneca, Novartis, etc. Deep technology integration, long-term licensing','t1.price':'Enterprise license $5M–$30M + 3–8% Royalty',
+  't2.num':'Tier 2 — SaaS Subscribers','t2.name':'Mid-size Biotech / CRO','t2.desc':'Mid-size biotech, contract research organizations, academic institutions','t2.price':'Annual fee $50K–$100K / Database license',
+  't3.num':'Tier 3 — Per-run Service','t3.name':'Small Labs / Startups','t3.desc':'Small research labs and startups with flexible, on-demand usage','t3.price':'$5K–$10K / run',
+  'ms.label':'Roadmap & Milestones','ms.title':'A Clear Path Forward','ms.desc':'Steady progress from algorithm validation to commercial deployment, in staged phases.',
+  'ms.short.title':'🎯 Near-term Milestones (2026–2027)','ms.long.title':'🌟 Long-term Vision (2028–2030+)',
+  'tl.1.title':'Challenge Cup + PI Centre Application','tl.1.desc':'Challenge Cup entrepreneurship competition; PI Centre 23rd Round application (deadline Apr 30)',
+  'tl.2.title':'Core Algorithm Paper Submission','tl.2.desc':'Target: Nature Communications / Nature Machine Intelligence',
+  'tl.3.title':'POC Agreement Signing','tl.3.desc':'Sign proof-of-concept collaboration agreements with 2–3 pharma companies',
+  'tl.4.title':'Seed Round + Validation Cohort','tl.4.desc':'Establish Asian HLA-A*24:02 validation cohort; close seed round financing',
+  'lt.1.title':'★ Asian Market Leader','lt.1.desc':'Become the leading AI neoantigen ranking platform in Asia, serving ≥ 30 enterprise clients annually',
+  'lt.2.title':'★ Global Expansion','lt.2.desc':'Expand to HLA-A*02:01 and other high-frequency alleles covering major global populations',
+  'lt.3.title':'★ Regulatory Alignment','lt.3.desc':'Align with FDA/EMA regulatory pathways; advance first EpitopeRank-prioritized vaccine into clinical trials',
+  'lt.4.title':'★ Indication Expansion','lt.4.desc':'Extend the platform to infectious diseases, autoimmune diseases, and other new indications',
+  'partners.label':'Partners & Honors','partners.title':'Building a Collaborative Ecosystem',
+  'partners.collab':'Technology & Industry Partners','partners.honors':'Honors & Recognition',
+  'pt.cuhk':'CUHK (Hong Kong)','pt.wh':'West China Hospital, National Key Lab','pt.cityu':'City University of Hong Kong','pt.pku':'Peking University (PKU)','pt.nus':'National University of Singapore (NUS)',
+  'aw.1.title':'PI Centre Application (23rd Round)','aw.1.desc':'Hong Kong PI Centre startup accelerator — non-dilutive funding up to HKD $6M over 4 years',
+  'aw.2.title':'12th Challenge Cup Participant','aw.2.desc':'HK University Student Innovation & Entrepreneurship Competition — Healthcare / Biotech Track',
+  'aw.3.title':'2 US Patents Granted','aw.3.desc':'Non-canonical neoantigen discovery technology; exclusive licensing partnership with AuroraEpitope',
+  'aw.4.title':'AuroraEpitope Consortium','aw.4.desc':'Built on AuroraEpitope\'s experimental platform; supported by 48%–70% T cell response rate in vivo data',
+  'contact.label':'Contact Us','contact.title':'Explore Collaboration',
+  'contact.desc':'Whether for technology licensing, data collaboration, or investment discussions — we\'d love to connect.',
+  'contact.ceo':'Ziwei Wang (CEO)','contact.cta':'Explore EpitopeRank',
+  'footer.copy':'© 2026 EpitopeRank · CUHK × AuroraEpitope Limited · Knowledge Graph-Driven Multi-Evidence Neoantigen Ranking Engine'
+}
+};
+
+// ── i18n engine ───────────────────────────────────────────────────────────────
+let lang = 'zh-CN';
+function applyLang(l) {
+  lang = l;
+  const d = T[l];
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = d[el.dataset.i18n];
+    if (v !== undefined) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const v = d[el.dataset.i18nHtml];
+    if (v !== undefined) el.innerHTML = v;
+  });
+  document.querySelectorAll('.nav-lang button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === l);
+  });
+}
+
+document.querySelectorAll('.nav-lang button').forEach(btn => {
+  btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+});
+
+applyLang('zh-CN');
+
+// ── Scroll reveal ─────────────────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Nav active on scroll ──────────────────────────────────────────────────────
+const ids = ['problem','solution','technology','team','market','milestones','partners','contact'];
+window.addEventListener('scroll', () => {
+  let cur = '';
+  ids.forEach(id => { const s = document.getElementById(id); if (s && scrollY >= s.offsetTop - 90) cur = id; });
+  document.querySelectorAll('.nav-links a').forEach(a => { a.style.color = a.getAttribute('href') === '#'+cur ? 'var(--cyan)' : ''; });
+}, { passive:true });
+
+// ── Stagger card animations ───────────────────────────────────────────────────
+document.querySelectorAll('.problem-card, .team-card, .award-card, .advisor-card, .funnel-card').forEach((el, i) => {
+  el.style.transitionDelay = (i % 4 * 0.08) + 's';
+});
+</script>
+</body>
+</html>
