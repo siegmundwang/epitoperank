@@ -90,14 +90,14 @@ section{padding:6rem 2rem}
 #team{background:var(--navy-mid)}
 .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:3rem}
 .team-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.875rem;padding:2rem;display:flex;gap:1.25rem;transition:border-color .2s}.team-card:hover{border-color:rgba(0,212,255,.3)}
-.avatar{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:#000;background:var(--grad);flex-shrink:0}
+.avatar{width:64px;height:64px;min-width:64px;border-radius:50%;object-fit:cover;flex-shrink:0}
 .team-role{display:inline-block;font-size:.75rem;padding:.2rem .6rem;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:.3rem;color:var(--cyan);margin-bottom:.75rem}
 .team-bio{font-size:.8rem;color:var(--text-muted);line-height:1.6}
 .advisors{margin-top:4rem}.advisors h3{font-size:1.2rem;color:var(--white);margin-bottom:1.5rem}
-.advisor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
-.advisor-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
-.advisor-avatar{width:44px;height:44px;min-width:44px;border-radius:50%;background:linear-gradient(135deg,var(--teal-dark),var(--navy-mid));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;color:var(--cyan);border:1px solid rgba(0,155,158,.3)}
-.advisor-name{font-size:.95rem;font-weight:600;color:var(--white)}.advisor-inst{font-size:.75rem;color:var(--text-muted)}.advisor-role{font-size:.7rem;color:var(--teal);margin-top:.15rem}
+.advisor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.advisor-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem}
+.advisor-avatar{width:72px;height:72px;min-width:72px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(0,155,158,.3)}
+.advisor-name{font-size:.95rem;font-weight:600;color:var(--white)}.advisor-inst{font-size:.7rem;color:var(--text-muted);line-height:1.4}.advisor-role{font-size:.68rem;color:var(--teal);margin-top:.1rem}
 /* market */
 #market{background:var(--navy)}
 .market-funnel{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
@@ -130,6 +130,17 @@ section{padding:6rem 2rem}
 .award-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:2rem}
 .award-card{background:var(--navy-card);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;display:flex;align-items:flex-start;gap:1rem}
 .award-icon{font-size:1.5rem;margin-top:.1rem}.award-title{font-size:.95rem;font-weight:600;color:var(--white);margin-bottom:.25rem}.award-desc{font-size:.8rem;color:var(--text-muted)}
+/* progress bar */
+.progress-section{margin-top:3rem}
+.progress-item{margin-bottom:2rem}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem}
+.progress-title{font-size:.9rem;font-weight:600;color:var(--white)}
+.progress-pct{font-size:.8rem;color:var(--teal);font-weight:700}
+.progress-track{width:100%;height:8px;background:rgba(30,48,80,.6);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;background:var(--grad);transition:width 1s ease;position:relative}
+.progress-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);animation:shimmer 2s infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
 /* contact */
 #contact{background:radial-gradient(ellipse 80% 70% at 50% 100%,#0a2040 0%,var(--navy) 70%);text-align:center}
 .contact-inner{max-width:640px;margin:0 auto}
@@ -142,6 +153,7 @@ footer strong{color:var(--text-muted)}
   .pipeline,.market-funnel,.tier-grid,.tech-grid{grid-template-columns:1fr}
   .pipe-step:first-child,.pipe-step:last-child{border-radius:.875rem}
   section{padding:4rem 1.25rem}.milestones-inner{grid-template-columns:1fr!important}
+  .advisor-grid{grid-template-columns:repeat(2,1fr)!important}
 }
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
 .reveal.visible{opacity:1;transform:none}
@@ -341,7 +353,7 @@ footer strong{color:var(--text-muted)}
     </div>
     <div class="team-grid reveal">
       <div class="team-card">
-        <div class="avatar">王</div>
+        <img class="avatar" src="./resources/王子玮自拍.jpg" alt="王子玮 Ziwei Wang"/>
         <div>
           <div style="font-size:1.1rem;font-weight:700;color:var(--white)">王子玮</div>
           <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Ziwei Wang</div>
@@ -350,7 +362,7 @@ footer strong{color:var(--text-muted)}
         </div>
       </div>
       <div class="team-card">
-        <div class="avatar">钟</div>
+        <img class="avatar" src="./resources/钟明自拍.png" alt="钟明 Ming Zhong"/>
         <div>
           <div style="font-size:1.1rem;font-weight:700;color:var(--white)" data-i18n="m2.name"></div>
           <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Ming Zhong</div>
@@ -359,7 +371,7 @@ footer strong{color:var(--text-muted)}
         </div>
       </div>
       <div class="team-card">
-        <div class="avatar">王</div>
+        <img class="avatar" src="./resources/王婷彧自拍.jpg" alt="王婷彧 Tingyu Wang"/>
         <div>
           <div style="font-size:1.1rem;font-weight:700;color:var(--white)" data-i18n="m3.name"></div>
           <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:.25rem">Tingyu Wang</div>
@@ -371,12 +383,13 @@ footer strong{color:var(--text-muted)}
     <div class="advisors reveal">
       <h3 data-i18n="advisors.title"></h3>
       <div class="advisor-grid">
-        <div class="advisor-card"><div class="advisor-avatar">王</div><div><div class="advisor-name">王鑫</div><div class="advisor-inst" data-i18n="adv.1.inst"></div><div class="advisor-role" data-i18n="adv.1.role"></div></div></div>
-        <div class="advisor-card"><div class="advisor-avatar">王</div><div><div class="advisor-name">王宪赓</div><div class="advisor-inst">AuroraEpitope Limited</div><div class="advisor-role" data-i18n="adv.2.role"></div></div></div>
-        <div class="advisor-card"><div class="advisor-avatar">詹</div><div><div class="advisor-name" data-i18n="adv.3.name"></div><div class="advisor-inst" data-i18n="adv.3.inst"></div><div class="advisor-role" data-i18n="adv.3.role"></div></div></div>
-        <div class="advisor-card"><div class="advisor-avatar">史</div><div><div class="advisor-name">史家海</div><div class="advisor-inst" data-i18n="adv.4.inst"></div><div class="advisor-role" data-i18n="adv.4.role"></div></div></div>
-        <div class="advisor-card"><div class="advisor-avatar">顾</div><div><div class="advisor-name">顾晓燕</div><div class="advisor-inst">AstraZeneca</div><div class="advisor-role" data-i18n="adv.5.role"></div></div></div>
-        <div class="advisor-card"><div class="advisor-avatar">张</div><div><div class="advisor-name">张维敏</div><div class="advisor-inst" data-i18n="adv.6.inst"></div><div class="advisor-role" data-i18n="adv.6.role"></div></div></div>
+        <!-- 6 Advisors matching final PPTX Slide 8 -->
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/wx.jpg" alt="王鑫"/><div><div class="advisor-name">王鑫</div><div class="advisor-inst" data-i18n="adv.1.inst"></div><div class="advisor-role" data-i18n="adv.1.role"></div></div></div>
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/王宪赓照片_hicool.png" alt="王宪赓"/><div><div class="advisor-name">王宪赓</div><div class="advisor-inst">AuroraEpitope CEO · CUHK Research Associate</div><div class="advisor-role" data-i18n="adv.2.role"></div></div></div>
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/詹启敏照片.png" alt="詹启敏"/><div><div class="advisor-name" data-i18n="adv.3.name"></div><div class="advisor-inst" data-i18n="adv.3.inst"></div><div class="advisor-role" data-i18n="adv.3.role"></div></div></div>
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/史家海照片.png" alt="史家海"/><div><div class="advisor-name">史家海</div><div class="advisor-inst">NUS Assistant Professor · Tenure-track</div><div class="advisor-role" data-i18n="adv.4.role"></div></div></div>
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/顾晓燕照片.png" alt="顾晓燕"/><div><div class="advisor-name">顾晓燕</div><div class="advisor-inst">AstraZeneca Global R&D Science Lead</div><div class="advisor-role" data-i18n="adv.5.role"></div></div></div>
+        <div class="advisor-card"><img class="advisor-avatar" src="./resources/zwm.jpg" alt="张维敏"/><div><div class="advisor-name">张维敏</div><div class="advisor-inst">北京大学分子肿瘤学实验室 · 卓越青年人才</div><div class="advisor-role" data-i18n="adv.6.role"></div></div></div>
       </div>
     </div>
   </div>
@@ -448,6 +461,29 @@ footer strong{color:var(--text-muted)}
           <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.3.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.3.desc"></p></div>
           <div class="card" style="padding:1.25rem"><div style="font-size:.85rem;font-weight:600;color:var(--white);margin-bottom:.3rem" data-i18n="lt.4.title"></div><p style="font-size:.8rem;color:var(--text-muted)" data-i18n="lt.4.desc"></p></div>
         </div>
+      </div>
+    </div>
+    <div class="progress-section reveal">
+      <h3 style="font-size:.875rem;color:var(--cyan);margin-bottom:1.5rem;letter-spacing:.06em;text-transform:uppercase" data-i18n="ms.progress.title"></h3>
+      <div class="progress-item">
+        <div class="progress-header"><span class="progress-title" data-i18n="prog.1.title"></span><span class="progress-pct">85%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:85%"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-header"><span class="progress-title" data-i18n="prog.2.title"></span><span class="progress-pct">70%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:70%"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-header"><span class="progress-title" data-i18n="prog.3.title"></span><span class="progress-pct">55%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:55%"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-header"><span class="progress-title" data-i18n="prog.4.title"></span><span class="progress-pct">30%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:30%"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-header"><span class="progress-title" data-i18n="prog.5.title"></span><span class="progress-pct">15%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:15%"></div></div>
       </div>
     </div>
   </div>
@@ -564,18 +600,22 @@ const T = {
   'tech.patent':'🔒 技术壁垒：基于 AuroraEpitope 2项已授权美国专利（非经典新抗原发现相关），独家授权合作关系',
   'team.label':'核心团队','team.title':'跨学科精英团队',
   'team.desc':'算法 × 实验生物学 × 生物统计学——三位一体的互补型核心团队，全面覆盖从AI到临床转化的完整能力链。',
-  'm1.bio':'前BGI Research研究员（4年+），CUHK医学院在读博士。MHC结合预测与深度学习专家，发表论文于Cell Reports Medicine、npj Precision Oncology等顶刊，Google Scholar引用1,000+，h-index≈16。',
+  'm1.bio':'前BGI Research研究员（4年+），CUHK外科系在读博士。MHC结合预测与深度学习专家，发表论文于Cell Reports Medicine、npj Precision Oncology等顶刊，Google Scholar引用1,000+，h-index≈16。',
   'm2.name':'钟明','m2.role':'Experimental Biology Lead',
-  'm2.bio':'华西医院国家重点实验室科研助理，CAR-T与NK细胞治疗领域专家。深度参与肿瘤免疫实验平台建设，负责EpitopeRank体外验证体系构建。',
+  'm2.bio':'华西医院国家重点实验室科研助理，CUHK外科系在读硕士。CAR-T与NK细胞治疗领域专家，深度参与肿瘤免疫实验平台建设，负责EpitopeRank体外验证体系构建。',
   'm3.name':'王婷彧','m3.role':'Bioinformatics & Data Lead',
-  'm3.bio':'香港城市大学生物统计学硕士，单细胞组学与空间转录组学专家。精通Python、R及多组学数据整合分析，负责知识图谱数据管道构建。',
+  'm3.bio':'CityU生物统计学硕士，CUHK外科系在读博士。单细胞组学与空间转录组学专家，精通Python/R及多组学数据整合分析，负责知识图谱数据管道构建。',
   'advisors.title':'科学顾问团',
   'adv.1.inst':'香港中文大学（CUHK）','adv.1.role':'首席学术顾问',
-  'adv.2.role':'产业顾问 / CEO',
+  'adv.2.role':'AuroraEpitope CEO / 产业顾问',
   'adv.3.name':'詹启敏 院士','adv.3.inst':'北京大学（PKU）','adv.3.role':'荣誉顾问',
-  'adv.4.inst':'新加坡国立大学（NUS）','adv.4.role':'AI / ML 顾问',
+  'adv.4.inst':'新加坡国立大学（NUS）','adv.4.role':'生物技术顾问',
   'adv.5.role':'制药行业顾问',
   'adv.6.inst':'北京大学（PKU）','adv.6.role':'免疫学顾问',
+  'adv.7.role':'首席肿瘤顾问（院士）',
+  'adv.8.role':'AI / 医学人工智能顾问',
+  'adv.9.name':'汪铭','adv.9.inst':'中科院化学所（ICCAS）教授 · NSFC杰青','adv.9.role':'制药顾问',
+  'adv.10.name':'罗添利','adv.10.inst':'香港大学（HKU）','adv.10.role':'药物科学家',
   'market.label':'市场分析','market.title':'千亿赛道，亚洲人群蓝海',
   'market.desc':'全球癌症免疫治疗市场高速增长，亚洲人群HLA适配工具严重稀缺，形成独特的市场切入点。',
   'tam.desc':'全球癌症疫苗/免疫治疗市场（含经典+非经典新抗原），覆盖胰腺癌、黑色素瘤、肺癌、乳腺癌等主要适应症',
@@ -587,7 +627,19 @@ const T = {
   't2.num':'Tier 2 — SaaS 订阅客户','t2.name':'中型 Biotech / CRO','t2.desc':'中型生物技术公司、合同研究机构、学术机构','t2.price':'年费 $50K–$100K / 数据库许可',
   't3.num':'Tier 3 — 按次服务','t3.name':'小型实验室 / 初创','t3.desc':'小型研究实验室、初创公司，弹性按需使用','t3.price':'$5K–$10K / run',
   'ms.label':'发展路线 & 里程碑','ms.title':'清晰的发展路径','ms.desc':'从算法验证到商业化落地，分阶段稳步推进。',
-  'ms.short.title':'🎯 短期里程碑 (2026–2027)','ms.long.title':'🌟 中长期愿景 (2028–2030+)',
+  'ms.short.title':'🎯 短期里程碑 (2026–2027)','ms.long.title':'🌟 中長期願景 (2028–2030+)',
+  'ms.progress.title':'📊 項目進展',
+  'prog.1.title':'核心算法與知識圖譜引擎',
+  'prog.2.title':'挑戰杯參賽 + PI Centre申請',
+  'prog.3.title':'驗證隊列與POC合作',
+  'prog.4.title':'種子輪融資',
+  'prog.5.title':'亞洲市場商業化落地',
+  'ms.progress.title':'📊 项目进展',
+  'prog.1.title':'核心算法与知识图谱引擎',
+  'prog.2.title':'挑战杯参赛 + PI Centre申请',
+  'prog.3.title':'验证队列与POC合作',
+  'prog.4.title':'种子轮融资',
+  'prog.5.title':'亚洲市场商业化落地',
   'tl.1.title':'挑战杯参赛 + PI Centre申请','tl.1.desc':'挑战杯创业计划类参赛；PI Centre第23轮申请（截止4月30日）',
   'tl.2.title':'核心算法论文投稿','tl.2.desc':'目标：Nature Communications / Nature Machine Intelligence',
   'tl.3.title':'POC 验证协议签署','tl.3.desc':'与 2–3 家药企签署概念验证合作协议',
@@ -664,18 +716,22 @@ const T = {
   'tech.patent':'🔒 技術壁壘：基於 AuroraEpitope 2項已授權美國專利（非經典新抗原發現相關），獨家授權合作關係',
   'team.label':'核心團隊','team.title':'跨學科精英團隊',
   'team.desc':'算法 × 實驗生物學 × 生物統計學——三位一體的互補型核心團隊，全面覆蓋從AI到臨床轉化的完整能力鏈。',
-  'm1.bio':'前BGI Research研究員（4年+），CUHK醫學院在讀博士。MHC結合預測與深度學習專家，發表論文於Cell Reports Medicine、npj Precision Oncology等頂刊，Google Scholar引用1,000+，h-index≈16。',
+  'm1.bio':'前BGI Research研究員（4年+），CUHK外科系在讀博士。MHC結合預測與深度學習專家，發表論文於Cell Reports Medicine、npj Precision Oncology等頂刊，Google Scholar引用1,000+，h-index≈16。',
   'm2.name':'鐘明','m2.role':'Experimental Biology Lead',
-  'm2.bio':'華西醫院國家重點實驗室科研助理，CAR-T與NK細胞治療領域專家。深度參與腫瘤免疫實驗平台建設，負責EpitopeRank體外驗證體系構建。',
+  'm2.bio':'華西醫院國家重點實驗室科研助理，CUHK外科系在讀碩士。CAR-T與NK細胞治療領域專家，深度參與腫瘤免疫實驗平台建設，負責EpitopeRank體外驗證體系構建。',
   'm3.name':'王婷彧','m3.role':'Bioinformatics & Data Lead',
-  'm3.bio':'香港城市大學生物統計學碩士，單細胞組學與空間轉錄組學專家。精通Python、R及多組學資料整合分析，負責知識圖譜資料管道構建。',
+  'm3.bio':'CityU生物統計學碩士，CUHK外科系在讀博士。單細胞組學與空間轉錄組學專家，精通Python/R及多組學資料整合分析，負責知識圖譜資料管道構建。',
   'advisors.title':'科學顧問團',
   'adv.1.inst':'香港中文大學（CUHK）','adv.1.role':'首席學術顧問',
-  'adv.2.role':'產業顧問 / CEO',
+  'adv.2.role':'AuroraEpitope CEO / 產業顧問',
   'adv.3.name':'詹啟敏 院士','adv.3.inst':'北京大學（PKU）','adv.3.role':'榮譽顧問',
-  'adv.4.inst':'新加坡國立大學（NUS）','adv.4.role':'AI / ML 顧問',
+  'adv.4.inst':'新加坡國立大學（NUS）','adv.4.role':'生物技術顧問',
   'adv.5.role':'製藥行業顧問',
   'adv.6.inst':'北京大學（PKU）','adv.6.role':'免疫學顧問',
+  'adv.7.role':'首席腫瘤顧問（院士）',
+  'adv.8.role':'AI / 醫學人工智能顧問',
+  'adv.9.name':'汪銘','adv.9.inst':'中科院化學所（ICCAS）教授 · NSFC傑青','adv.9.role':'製藥顧問',
+  'adv.10.name':'羅添利','adv.10.inst':'香港大學（HKU）','adv.10.role':'藥物科學家',
   'market.label':'市場分析','market.title':'千億賽道，亞洲人群藍海',
   'market.desc':'全球癌症免疫治療市場高速增長，亞洲人群HLA適配工具嚴重稀缺，形成獨特的市場切入點。',
   'tam.desc':'全球癌症疫苗/免疫治療市場（含經典+非經典新抗原），覆蓋胰腺癌、黑色素瘤、肺癌、乳腺癌等主要適應症',
@@ -764,18 +820,22 @@ const T = {
   'tech.patent':'🔒 IP Moat: Built on 2 granted US patents from AuroraEpitope (non-canonical neoantigen discovery), with exclusive licensing partnership',
   'team.label':'Core Team','team.title':'Multidisciplinary Elite Team',
   'team.desc':'Algorithm × Experimental Biology × Biostatistics — a complementary trio covering the complete capability chain from AI to clinical translation.',
-  'm1.bio':'Former researcher at BGI Research (4+ years), PhD candidate at CUHK Faculty of Medicine. Expert in MHC binding prediction and deep learning. Published in Cell Reports Medicine, npj Precision Oncology (Nature journal), and more. Google Scholar citations 1,000+, h-index ≈16.',
+  'm1.bio':'Former researcher at BGI Research (4+ years), PhD candidate at CUHK Surgery. Expert in MHC binding prediction and deep learning. Published in Cell Reports Medicine, npj Precision Oncology (Nature journal), and more. Google Scholar citations 1,000+, h-index ≈16.',
   'm2.name':'Ming Zhong','m2.role':'Experimental Biology Lead',
-  'm2.bio':'Research associate at West China Hospital National Key Laboratory. Expert in CAR-T and NK cell therapy. Leads EpitopeRank\'s in vitro validation platform construction.',
+  'm2.bio':'Research associate at West China Hospital National Key Lab, MSc candidate at CUHK Surgery. Expert in CAR-T and NK cell therapy. Leads EpitopeRank\'s in vitro validation platform construction.',
   'm3.name':'Tingyu Wang','m3.role':'Bioinformatics & Data Lead',
-  'm3.bio':'MSc in Biostatistics from City University of Hong Kong. Expert in single-cell omics and spatial transcriptomics. Proficient in Python, R, and multi-omics data integration. Leads knowledge graph data pipeline construction.',
+  'm3.bio':'MSc in Biostatistics from City University of Hong Kong, PhD candidate at CUHK Surgery. Expert in single-cell omics and spatial transcriptomics. Proficient in Python, R, and multi-omics data integration.',
   'advisors.title':'Scientific Advisory Board',
   'adv.1.inst':'The Chinese University of Hong Kong (CUHK)','adv.1.role':'Chief Academic Advisor',
-  'adv.2.role':'Industry Advisor / CEO',
+  'adv.2.role':'AuroraEpitope CEO / Industry Advisor',
   'adv.3.name':'Prof. Qimin Zhan (Academician)','adv.3.inst':'Peking University (PKU)','adv.3.role':'Honorary Advisor',
-  'adv.4.inst':'National University of Singapore (NUS)','adv.4.role':'AI / ML Advisor',
+  'adv.4.inst':'National University of Singapore (NUS)','adv.4.role':'Biotech Advisor',
   'adv.5.role':'Pharma Industry Advisor',
   'adv.6.inst':'Peking University (PKU)','adv.6.role':'Immunology Advisor',
+  'adv.7.role':'Chief Oncology Advisor (Academician)',
+  'adv.8.role':'AI / Medical AI Advisor',
+  'adv.9.name':'Ming Wang','adv.9.inst':'Institute of Chemistry, CAS (ICCAS) · NSFC Distinguished Scholar','adv.9.role':'Pharmaceutical Consultant',
+  'adv.10.name':'Tianli Luo','adv.10.inst':'University of Hong Kong (HKU)','adv.10.role':'Pharmaceutical Scientist',
   'market.label':'Market Analysis','market.title':'$40B Opportunity, Asian Market Blue Ocean',
   'market.desc':'The global cancer immunotherapy market is growing rapidly, while HLA-matched tools for Asian populations remain critically scarce — creating a unique market entry point.',
   'tam.desc':'Global cancer vaccine / immunotherapy market (canonical + non-canonical neoantigen), covering pancreatic cancer, melanoma, lung cancer, breast cancer, and other indications',
@@ -788,6 +848,12 @@ const T = {
   't3.num':'Tier 3 — Per-run Service','t3.name':'Small Labs / Startups','t3.desc':'Small research labs and startups with flexible, on-demand usage','t3.price':'$5K–$10K / run',
   'ms.label':'Roadmap & Milestones','ms.title':'A Clear Path Forward','ms.desc':'Steady progress from algorithm validation to commercial deployment, in staged phases.',
   'ms.short.title':'🎯 Near-term Milestones (2026–2027)','ms.long.title':'🌟 Long-term Vision (2028–2030+)',
+  'ms.progress.title':'📊 Project Progress',
+  'prog.1.title':'Core Algorithm & Knowledge Graph Engine',
+  'prog.2.title':'Challenge Cup + PI Centre Application',
+  'prog.3.title':'Validation Cohort & POC Partnerships',
+  'prog.4.title':'Seed Round Financing',
+  'prog.5.title':'Asia Commercial Launch',
   'tl.1.title':'Challenge Cup + PI Centre Application','tl.1.desc':'Challenge Cup entrepreneurship competition; PI Centre 23rd Round application (deadline Apr 30)',
   'tl.2.title':'Core Algorithm Paper Submission','tl.2.desc':'Target: Nature Communications / Nature Machine Intelligence',
   'tl.3.title':'POC Agreement Signing','tl.3.desc':'Sign proof-of-concept collaboration agreements with 2–3 pharma companies',
