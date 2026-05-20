@@ -1,0 +1,4061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EpitopeRank — 基于知识图谱的新抗原多证据融合优选引擎</title>
+  
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      /* Morandi & Macaron Premium Muted Dark Theme Palette */
+      --bg-slate: #13171e;        /* Deep Morandi Slate Gray */
+      --bg-card: #1b212a;         /* Muted Indigo Card Background */
+      --bg-sidebar: #171c24;      /* Sidebar slate */
+      --bg-active: #262e3a;       /* Active card/tab state */
+      --border-slate: #2c3543;    /* Muted steel-blue border */
+      
+      --morandi-lavender: #a89dbb; /* Soft Lilac / Muted Lavender */
+      --morandi-cream: #ebdcd0;    /* Warm Sand / Cream */
+      --morandi-sage: #8ba293;     /* Muted Sage Green */
+      --morandi-blush: #cba2a2;    /* Muted Rose / Blush Pink */
+      --morandi-blue: #7c8ba1;     /* Dusty Slate Blue */
+      --morandi-gold: #caa885;     /* Muted Gold / Bronze */
+      
+      --text-primary: #e2e8f0;    /* Soft White Primary Text */
+      --text-secondary: #94a3b8;  /* Muted Slate Secondary Text */
+      --text-muted: #5e6b7c;      /* Muted Darker Gray Text */
+      
+      --transition-fast: 0.2s ease;
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      
+      --glow-sage: 0 0 16px rgba(139, 162, 147, 0.2);
+      --glow-blush: 0 0 16px rgba(203, 162, 162, 0.2);
+      --glow-lavender: 0 0 16px rgba(168, 157, 187, 0.2);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    html, body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      background-color: var(--bg-slate);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      line-height: 1.5;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-slate);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-slate);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Fixed Premium Top Navigation */
+    .top-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(19, 23, 30, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-slate);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      transition: var(--transition-normal);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+
+    .logo-icon {
+      font-size: 20px;
+      color: var(--morandi-lavender);
+      background: linear-gradient(135deg, var(--morandi-lavender), var(--morandi-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 6px rgba(168, 157, 187, 0.4));
+      font-weight: 800;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(168, 157, 187, 0.12);
+      color: var(--morandi-lavender);
+      border: 1px solid rgba(168, 157, 187, 0.25);
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Dual Mode Switcher */
+    .mode-switcher {
+      display: flex;
+      background: rgba(27, 33, 42, 0.6);
+      border: 1px solid var(--border-slate);
+      padding: 4px;
+      border-radius: 30px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition-normal);
+    }
+
+    .mode-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .mode-btn.active {
+      background: var(--bg-active);
+      color: var(--morandi-cream);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      border: 1px solid rgba(235, 220, 208, 0.15);
+    }
+
+    .header-status-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--morandi-sage);
+      font-weight: 600;
+      background: rgba(139, 162, 147, 0.08);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(139, 162, 147, 0.15);
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--morandi-sage);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--morandi-sage);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--morandi-sage); }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+
+    /* Main Container Views */
+    .view-container {
+      margin-top: 64px;
+      min-height: calc(100vh - 64px);
+      width: 100%;
+      display: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity var(--transition-normal), transform var(--transition-normal);
+    }
+
+    .view-container.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =========================================
+       1. SaaS platform view styling
+       ========================================= */
+    .saas-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 64px);
+    }
+
+    /* Sidebar */
+    .saas-sidebar {
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-slate);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .menu-item a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: var(--transition-fast);
+      border: 1px solid transparent;
+    }
+
+    .menu-item:hover a {
+      color: var(--text-primary);
+      background: rgba(27, 33, 42, 0.4);
+    }
+
+    .menu-item.active a {
+      background: var(--bg-active);
+      color: var(--morandi-cream);
+      border-color: rgba(235, 220, 208, 0.08);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .menu-item-icon {
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+    }
+
+    .sidebar-footer {
+      padding-top: 20px;
+      border-top: 1px solid var(--border-slate);
+    }
+
+    .sidebar-brand-card {
+      background: rgba(27, 33, 42, 0.3);
+      border: 1px solid var(--border-slate);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .sbc-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .sbc-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Main Dashboard Content */
+    .saas-content {
+      padding: 24px 32px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(44, 53, 67, 0.15) 0%, transparent 70%);
+      position: relative;
+    }
+
+    /* Title Block */
+    .dashboard-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dh-title h2 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--morandi-cream), var(--text-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .dh-title p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Key Statistics Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition-normal);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: transparent;
+      transition: var(--transition-fast);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-card.sc-1::before { background: var(--morandi-blue); }
+    .stat-card.sc-2::before { background: var(--morandi-sage); }
+    .stat-card.sc-3::before { background: var(--morandi-lavender); }
+    .stat-card.sc-4::before { background: var(--morandi-blush); }
+
+    .sc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .sc-icon {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+
+    .sc-value {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      margin-top: 4px;
+    }
+
+    .sc-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Interactive Data Section Split */
+    .dashboard-split {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .data-table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .table-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-slate);
+      gap: 16px;
+      padding-bottom: 2px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 4px 12px;
+      cursor: pointer;
+      position: relative;
+      transition: var(--transition-fast);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: transparent;
+      transition: var(--transition-fast);
+    }
+
+    .tab-btn.active {
+      color: var(--morandi-cream);
+    }
+
+    .tab-btn.active::after {
+      background: var(--morandi-cream);
+    }
+
+    /* Filter Bar */
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      background: rgba(19, 23, 30, 0.6);
+      border: 1px solid var(--border-slate);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 110px;
+      transition: var(--transition-fast);
+    }
+
+    .filter-select:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-wrapper {
+      position: relative;
+    }
+
+    .search-input {
+      background: rgba(19, 23, 30, 0.6);
+      border: 1px solid var(--border-slate);
+      color: var(--text-primary);
+      border-radius: 10px;
+      padding: 6px 12px 6px 32px;
+      font-size: 12px;
+      width: 180px;
+      transition: var(--transition-normal);
+    }
+
+    .search-input:focus {
+      border-color: var(--morandi-blue);
+      width: 220px;
+      box-shadow: 0 0 10px rgba(124, 139, 161, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-export {
+      background: transparent;
+      border: 1px solid var(--border-slate);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-fast);
+    }
+
+    .btn-export:hover {
+      background: var(--bg-active);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Modern Table Style */
+    .table-viewport {
+      width: 100%;
+      overflow-x: auto;
+      min-height: 380px;
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .custom-table th {
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-slate);
+    }
+
+    .custom-table td {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-slate);
+      white-space: nowrap;
+    }
+
+    .custom-table tbody tr {
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .custom-table tbody tr:hover {
+      background: rgba(38, 46, 58, 0.25);
+    }
+
+    .custom-table tbody tr.active-row {
+      background: rgba(38, 46, 58, 0.4);
+      border-left: 2px solid var(--morandi-cream);
+    }
+
+    /* Badges & Status */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-1a {
+      background: rgba(139, 162, 147, 0.12);
+      color: var(--morandi-sage);
+      border: 1px solid rgba(139, 162, 147, 0.3);
+    }
+
+    .badge-1b {
+      background: rgba(168, 157, 187, 0.12);
+      color: var(--morandi-lavender);
+      border: 1px solid rgba(168, 157, 187, 0.3);
+    }
+
+    .badge-2a {
+      background: rgba(203, 162, 162, 0.12);
+      color: var(--morandi-blush);
+      border: 1px solid rgba(203, 162, 162, 0.3);
+    }
+
+    .badge-2b {
+      background: rgba(202, 168, 133, 0.12);
+      color: var(--morandi-gold);
+      border: 1px solid rgba(202, 168, 133, 0.3);
+    }
+
+    .status-completed {
+      color: var(--morandi-sage);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-completed::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--morandi-sage);
+      box-shadow: 0 0 6px var(--morandi-sage);
+    }
+
+    .status-running {
+      color: var(--morandi-blush);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-running::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--morandi-blush);
+      box-shadow: 0 0 6px var(--morandi-blush);
+      animation: blink 1.2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Table Footer Pagination */
+    .table-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-slate);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .pagination {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .page-item a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--border-slate);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: var(--transition-fast);
+    }
+
+    .page-item:hover a, .page-item.active a {
+      background: var(--bg-active);
+      color: var(--morandi-cream);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Details Drawer */
+    .details-drawer {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: var(--transition-normal);
+    }
+
+    .drawer-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-slate);
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drawer-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .dg-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dg-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .dg-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .peptide-seq-box {
+      background: rgba(19, 23, 30, 0.8);
+      border: 1px solid var(--border-slate);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--morandi-lavender);
+      letter-spacing: 1px;
+      word-break: break-all;
+    }
+
+    .drawer-progress-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 6px;
+      background: rgba(19, 23, 30, 0.8);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      width: 0;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pbf-lavender { background: var(--morandi-lavender); }
+    .pbf-blue { background: var(--morandi-blue); }
+
+    .drawer-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-drawer-primary {
+      background: rgba(168, 157, 187, 0.15);
+      border: 1px solid rgba(168, 157, 187, 0.3);
+      color: var(--morandi-lavender);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition-fast);
+    }
+
+    .btn-drawer-primary:hover {
+      background: rgba(168, 157, 187, 0.25);
+      color: var(--text-primary);
+    }
+
+    .btn-drawer-secondary {
+      background: transparent;
+      border: 1px solid var(--border-slate);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition-fast);
+    }
+
+    .btn-drawer-secondary:hover {
+      background: var(--bg-active);
+      color: var(--text-primary);
+    }
+
+    /* Bottom Widgets: Charts & Progress */
+    .widgets-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      gap: 20px;
+    }
+
+    .widget-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .widget-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .widget-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* SVG Donut Chart */
+    .donut-chart-container {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .donut-svg {
+      width: 140px;
+      height: 140px;
+    }
+
+    .chart-slice {
+      transition: stroke-width var(--transition-fast), filter var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .chart-slice:hover {
+      stroke-width: 14;
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.15));
+    }
+
+    /* Donut Legend */
+    .donut-legend {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+    }
+
+    .legend-color {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* SVG Area Line Chart */
+    .trend-chart-container {
+      width: 100%;
+      height: 200px;
+    }
+
+    .trend-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .trend-line {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: drawLine 2s forwards ease-in-out;
+    }
+
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .chart-marker {
+      transition: r var(--transition-fast), fill var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .chart-marker:hover {
+      r: 5;
+      fill: var(--text-primary);
+    }
+
+    /* Task Progress List */
+    .task-progress-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tp-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tp-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .tp-bar-bg {
+      height: 5px;
+      background: rgba(19, 23, 30, 0.8);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .tp-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      width: 0;
+      transition: width 1s ease-in-out;
+    }
+
+    .tpf-blue { background: var(--morandi-blue); }
+    .tpf-lavender { background: var(--morandi-lavender); }
+    .tpf-blush { background: var(--morandi-blush); }
+    .tpf-sage { background: var(--morandi-sage); }
+    .tpf-gold { background: var(--morandi-gold); }
+
+    /* Bottom Flow Diagram Area */
+    .flow-widget-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .flow-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .flow-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .btn-trigger-pipeline {
+      background: linear-gradient(135deg, var(--morandi-lavender), var(--morandi-blue));
+      border: none;
+      color: var(--bg-slate);
+      border-radius: 12px;
+      padding: 10px 24px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition-normal);
+      box-shadow: var(--glow-lavender);
+    }
+
+    .btn-trigger-pipeline:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(168, 157, 187, 0.4);
+    }
+
+    .pipeline-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      position: relative;
+    }
+
+    .flow-step-card {
+      background: rgba(19, 23, 30, 0.4);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+      position: relative;
+      transition: var(--transition-normal);
+    }
+
+    .flow-step-card:hover {
+      border-color: rgba(255,255,255,0.08);
+      transform: translateY(-2px);
+    }
+
+    .flow-step-card.active {
+      background: rgba(38, 46, 58, 0.3);
+      border-color: var(--morandi-lavender);
+      box-shadow: var(--glow-lavender);
+    }
+
+    .flow-step-card.completed {
+      background: rgba(139, 162, 147, 0.05);
+      border-color: var(--morandi-sage);
+      box-shadow: var(--glow-sage);
+    }
+
+    .step-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-secondary);
+      transition: var(--transition-normal);
+    }
+
+    .flow-step-card.active .step-icon {
+      border-color: var(--morandi-lavender);
+      color: var(--morandi-lavender);
+      box-shadow: 0 0 10px rgba(168, 157, 187, 0.3);
+    }
+
+    .flow-step-card.completed .step-icon {
+      border-color: var(--morandi-sage);
+      color: var(--morandi-sage);
+      box-shadow: 0 0 10px rgba(139, 162, 147, 0.3);
+    }
+
+    .step-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Arrow connecting steps */
+    .flow-step-card:not(:last-child)::after {
+      content: '➔';
+      position: absolute;
+      right: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--border-slate);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @media (max-width: 1024px) {
+      .saas-layout { grid-template-columns: 1fr; }
+      .saas-sidebar { display: none; }
+      .widgets-grid { grid-template-columns: 1fr; }
+      .dashboard-split { grid-template-columns: 1fr; }
+      .pipeline-flow { grid-template-columns: 1fr; }
+      .flow-step-card:not(:last-child)::after { content: '▼'; right:50%; top: auto; bottom: -16px; transform: translateX(50%); }
+    }
+
+
+    /* =========================================
+       2. Pitch Deck BP View Styling
+       ========================================= */
+    .pitch-layout {
+      padding: 32px 24px;
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Pitch Deck Controls */
+    .pitch-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      padding: 12px 24px;
+      border-radius: 16px;
+    }
+
+    .pitch-mode-toggle {
+      display: flex;
+      background: rgba(19, 23, 30, 0.8);
+      border: 1px solid var(--border-slate);
+      padding: 4px;
+      border-radius: 20px;
+      gap: 2px;
+    }
+
+    .pm-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .pm-btn.active {
+      background: var(--bg-active);
+      color: var(--morandi-cream);
+    }
+
+    .pitch-nav-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-slide-nav {
+      background: var(--bg-active);
+      border: 1px solid var(--border-slate);
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      transition: var(--transition-fast);
+    }
+
+    .btn-slide-nav:hover:not(:disabled) {
+      background: var(--border-slate);
+      color: var(--morandi-cream);
+    }
+
+    .btn-slide-nav:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .slide-page-indicator {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    /* Presentations Slide Container */
+    .pitch-slider-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 24px;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+
+    .slide-view {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.98);
+      transition: opacity var(--transition-slow), transform var(--transition-slow);
+      padding: 40px 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(135deg, var(--bg-card) 0%, #151a22 100%);
+    }
+
+    .slide-view.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 12px;
+    }
+
+    .slide-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .slide-category {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--morandi-blue);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .slide-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .slide-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--morandi-cream);
+      background: rgba(235, 220, 208, 0.08);
+      border: 1px solid rgba(235, 220, 208, 0.15);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .slide-content-area {
+      flex: 1;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 12px;
+    }
+
+    /* Cover Slide specific */
+    .cover-slide {
+      text-align: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      align-self: center;
+      padding: 6px 18px;
+      border: 1px solid rgba(168, 157, 187, 0.3);
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--morandi-lavender);
+      background: rgba(168, 157, 187, 0.08);
+      letter-spacing: 0.5px;
+    }
+
+    .cover-title {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #ffffff 0%, var(--morandi-cream) 40%, var(--morandi-lavender) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+
+    .cover-tagline {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+      font-weight: 500;
+    }
+
+    .cover-team-row {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .ctr-item strong {
+      color: var(--text-primary);
+    }
+    .ctr-item span {
+      color: var(--text-muted);
+      display: block;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    /* Pitch Grid */
+    .pitch-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .pitch-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .pitch-card-box {
+      background: rgba(19, 23, 30, 0.4);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 18px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: var(--transition-fast);
+    }
+
+    .pitch-card-box:hover {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(19, 23, 30, 0.6);
+    }
+
+    .pcb-icon {
+      font-size: 20px;
+      margin-bottom: 2px;
+    }
+
+    .pcb-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--morandi-cream);
+    }
+
+    .pcb-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Bold Highlight quote */
+    .bp-highlight-quote {
+      border-left: 4px solid var(--morandi-lavender);
+      background: rgba(168, 157, 187, 0.05);
+      padding: 12px 18px;
+      border-radius: 0 12px 12px 0;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    /* List style slides */
+    .bp-bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      list-style: none;
+    }
+
+    .bp-bullet-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .bp-bullet-list li::before {
+      content: '✦';
+      color: var(--morandi-lavender);
+      font-weight: bold;
+    }
+
+    .bp-bullet-list li strong {
+      color: var(--text-primary);
+      margin-right: 4px;
+    }
+
+    /* Horizontal Roadmap Timeline */
+    .bp-timeline-row {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin: 20px 0;
+    }
+
+    .bp-timeline-row::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--border-slate);
+      z-index: 1;
+    }
+
+    .bp-timeline-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 90px;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .bt-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 3px solid var(--text-muted);
+      transition: var(--transition-normal);
+    }
+
+    .bp-timeline-node.completed .bt-dot {
+      border-color: var(--morandi-sage);
+      background: var(--morandi-sage);
+    }
+
+    .bp-timeline-node.active .bt-dot {
+      border-color: var(--morandi-lavender);
+      background: var(--morandi-lavender);
+      box-shadow: var(--glow-lavender);
+    }
+
+    .bt-date {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .bp-timeline-node.active .bt-date {
+      color: var(--morandi-lavender);
+    }
+
+    .bt-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .bp-timeline-node.active .bt-title, .bp-timeline-node.completed .bt-title {
+      color: var(--text-primary);
+    }
+
+    /* Premium Team and Advisor Cards */
+    .bp-team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .bp-team-card {
+      background: rgba(19, 23, 30, 0.4);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .bp-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-slate);
+      background: var(--bg-sidebar);
+      flex-shrink: 0;
+    }
+
+    .bp-member-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .bpm-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .bpm-role {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--morandi-lavender);
+    }
+
+    .bpm-inst {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    .bpm-bio {
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.3;
+      margin-top: 2px;
+    }
+
+    /* Slide table */
+    .slide-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .slide-table th {
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-slate);
+      padding: 8px 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .slide-table td {
+      border-bottom: 1px solid var(--border-slate);
+      padding: 8px 12px;
+      color: var(--text-secondary);
+    }
+
+    .slide-table tr:hover td {
+      color: var(--text-primary);
+    }
+
+    /* Long Read BP View */
+    .long-read-container {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .long-read-nav {
+      position: sticky;
+      top: 96px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      list-style: none;
+    }
+
+    .lr-nav-item a {
+      display: block;
+      padding: 8px 16px;
+      border-left: 2px solid var(--border-slate);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: var(--transition-fast);
+    }
+
+    .lr-nav-item a:hover {
+      color: var(--text-primary);
+      border-left-color: var(--text-muted);
+    }
+
+    .lr-nav-item.active a {
+      color: var(--morandi-cream);
+      border-left-color: var(--morandi-cream);
+      font-weight: 700;
+    }
+
+    .long-read-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+
+    .lr-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      border-radius: 24px;
+      padding: 32px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .lr-sec-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-slate);
+      padding-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lr-sec-title span {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+
+    .lr-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .lr-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .lr-card {
+      background: rgba(19, 23, 30, 0.4);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .lr-team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .lr-advisor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .pitch-slider-container { aspect-ratio: auto; min-height: 480px; }
+      .slide-view { padding: 24px; }
+      .pitch-grid-2, .pitch-grid-3, .bp-team-grid { grid-template-columns: 1fr; }
+      .long-read-container { grid-template-columns: 1fr; }
+      .long-read-nav { display: none; }
+      .lr-grid-2, .lr-grid-3, .lr-team-grid, .lr-advisor-grid { grid-template-columns: 1fr; }
+    }
+
+
+    /* =========================================
+       3. Pipeline Simulation Modal Styling
+       ========================================= */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(19, 23, 30, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      width: 100%;
+      max-width: 600px;
+      border-radius: 24px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 24px 72px rgba(0,0,0,0.4);
+      transform: scale(0.95);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-slate);
+      padding-bottom: 14px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+
+    .btn-close-modal:hover {
+      background: var(--bg-active);
+      color: var(--text-primary);
+    }
+
+    /* Modal States */
+    .modal-state {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-state.active {
+      display: flex;
+    }
+
+    /* Upload Area */
+    .upload-area {
+      border: 2px dashed var(--border-slate);
+      background: rgba(19, 23, 30, 0.4);
+      border-radius: 16px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: var(--transition-normal);
+    }
+
+    .upload-area:hover {
+      border-color: var(--morandi-lavender);
+      background: rgba(38, 46, 58, 0.2);
+    }
+
+    .upload-icon {
+      font-size: 32px;
+      color: var(--morandi-lavender);
+    }
+
+    .upload-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .upload-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .preload-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .preload-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-preload {
+      background: var(--bg-active);
+      border: 1px solid var(--border-slate);
+      color: var(--text-primary);
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: var(--transition-fast);
+    }
+
+    .btn-preload:hover {
+      border-color: var(--morandi-cream);
+      background: rgba(38, 46, 58, 0.5);
+    }
+
+    .btn-preload span {
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Modal Animation State */
+    .running-pipeline-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mps-step {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(19, 23, 30, 0.4);
+      border: 1px solid var(--border-slate);
+      transition: var(--transition-normal);
+    }
+
+    .mps-step.pending { opacity: 0.4; }
+    .mps-step.running {
+      border-color: var(--morandi-lavender);
+      background: rgba(38, 46, 58, 0.2);
+      box-shadow: var(--glow-lavender);
+    }
+    .mps-step.completed {
+      border-color: var(--morandi-sage);
+      background: rgba(139, 162, 147, 0.04);
+    }
+
+    .mps-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-slate);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: var(--transition-normal);
+    }
+
+    .mps-step.running .mps-icon {
+      border-color: var(--morandi-lavender);
+      color: var(--morandi-lavender);
+      box-shadow: 0 0 8px rgba(168, 157, 187, 0.4);
+    }
+
+    .mps-step.completed .mps-icon {
+      border-color: var(--morandi-sage);
+      color: var(--morandi-sage);
+      background: rgba(139, 162, 147, 0.05);
+    }
+
+    .mps-detail {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .mps-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .mps-status-text {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .mps-step.running .mps-status-text {
+      color: var(--morandi-lavender);
+    }
+
+    .mps-step.completed .mps-status-text {
+      color: var(--morandi-sage);
+    }
+
+    .mps-progress-container {
+      width: 80px;
+      height: 4px;
+      background: var(--bg-card);
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .mps-step.running .mps-progress-container {
+      display: block;
+    }
+
+    .mps-progress-fill {
+      height: 100%;
+      background: var(--morandi-lavender);
+      width: 0;
+      transition: width var(--transition-fast);
+    }
+
+    /* Modal Console Logs */
+    .console-logs {
+      background: #0f1217;
+      border: 1px solid var(--border-slate);
+      border-radius: 12px;
+      padding: 12px;
+      height: 100px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--morandi-sage);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 8px;
+    }
+    .log-time { color: var(--text-muted); }
+
+    /* Modal Success State */
+    .success-panel {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0;
+    }
+
+    .success-ring {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(139, 162, 147, 0.1);
+      border: 2px solid var(--morandi-sage);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--morandi-sage);
+      box-shadow: var(--glow-sage);
+      animation: popSuccess 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popSuccess {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .success-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 440px;
+    }
+
+    .success-data-card {
+      background: rgba(19, 23, 30, 0.6);
+      border: 1px solid var(--border-slate);
+      border-radius: 16px;
+      padding: 14px;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sdc-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .sdc-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sdc-pep {
+      font-family: monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--morandi-lavender);
+      letter-spacing: 0.5px;
+    }
+
+    .sdc-score {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--morandi-sage);
+    }
+
+    .btn-modal-primary {
+      background: linear-gradient(135deg, var(--morandi-sage), var(--morandi-blue));
+      border: none;
+      color: var(--bg-slate);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      transition: var(--transition-normal);
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .btn-modal-primary:hover {
+      box-shadow: 0 4px 14px rgba(139, 162, 147, 0.4);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="brand">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">EpitopeRank</span>
+    </div>
+    
+    <!-- Mode switch: SaaS Platform vs BP Slides -->
+    <div class="mode-switcher">
+      <button class="mode-btn active" id="mode-btn-saas" onclick="setViewMode('saas')">
+        <span class="mb-icon">💻</span>
+        <span class="mb-text">SaaS 平台交互系统</span>
+      </button>
+      <button class="mode-btn" id="mode-btn-pitch" onclick="setViewMode('pitch')">
+        <span class="mb-icon">📋</span>
+        <span class="mb-text">项目商业计划书 (BP)</span>
+      </button>
+    </div>
+    
+    <div class="header-status-area">
+      <span class="header-status"><span class="pulse-dot"></span>系统实时在线</span>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       VIEW 1: SaaS INTERACTIVE DEMO VIEW
+       ========================================================================= -->
+  <main class="view-container active" id="view-saas">
+    <div class="saas-layout">
+      <!-- Left Sidebar -->
+      <aside class="saas-sidebar">
+        <ul class="sidebar-menu">
+          <li class="menu-item active">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">📊</span>
+              <span>总览中心</span>
+            </a>
+          </li>
+          <li class="menu-item">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">📂</span>
+              <span>数据中心</span>
+            </a>
+          </li>
+          <li class="menu-item">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">⚙️</span>
+              <span>分析中心</span>
+            </a>
+          </li>
+          <li class="menu-item">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">📋</span>
+              <span>任务中心</span>
+            </a>
+          </li>
+          <li class="menu-item">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">📁</span>
+              <span>项目管理</span>
+            </a>
+          </li>
+          <li class="menu-item">
+            <a href="javascript:void(0)">
+              <span class="menu-item-icon">🛠️</span>
+              <span>系统设置</span>
+            </a>
+          </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+          <div class="sidebar-brand-card">
+            <div class="sbc-title">AuroraEpitope</div>
+            <div class="sbc-desc">启启明星位研发伙伴</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Dashboard Main Section -->
+      <section class="saas-content">
+        
+        <!-- Welcome Hero Info -->
+        <div class="dashboard-hero">
+          <div class="dh-title">
+            <h2>以计算之力 发现免疫新可能</h2>
+            <p>新一代非经典肿瘤免疫表位发现与候选靶点高维优选决策引擎</p>
+          </div>
+        </div>
+
+        <!-- 4 Key Statistics Cards -->
+        <div class="stats-grid">
+          <div class="stat-card sc-1">
+            <div class="sc-header">
+              <span>LRDB 数据库条目</span>
+              <span class="sc-icon">📦</span>
+            </div>
+            <div class="sc-value" id="stats-db">325,000+</div>
+            <div class="sc-meta">
+              <span>更新时间: 2024-05-20</span>
+            </div>
+          </div>
+          
+          <div class="stat-card sc-2">
+            <div class="sc-header">
+              <span>肿瘤样本总数</span>
+              <span class="sc-icon">👥</span>
+            </div>
+            <div class="sc-value" id="stats-samples">50,000+</div>
+            <div class="sc-meta">
+              <span>来自全球 18 个经典队列</span>
+            </div>
+          </div>
+          
+          <div class="stat-card sc-3">
+            <div class="sc-header">
+              <span>已覆盖实体瘤种</span>
+              <span class="sc-icon">🧬</span>
+            </div>
+            <div class="sc-value">10+</div>
+            <div class="sc-meta">
+              <span>覆盖主要临床实体瘤类型</span>
+            </div>
+          </div>
+          
+          <div class="stat-card sc-4">
+            <div class="sc-header">
+              <span>高置信度候选靶点</span>
+              <span class="sc-icon">🎯</span>
+            </div>
+            <div class="sc-value" id="stats-candidates">18,642</div>
+            <div class="sc-meta">
+              <span>GNN 置信评分评分 &ge; 0.8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split Grid: Table & Right Details Drawer -->
+        <div class="dashboard-split">
+          
+          <!-- Data Table Card -->
+          <div class="data-table-container">
+            <!-- Table Tabs -->
+            <div class="table-tabs">
+              <button class="tab-btn active" id="tab-samples" onclick="setTableTab('samples')">样本库 (生物信息列表)</button>
+              <button class="tab-btn" id="tab-peptides" onclick="setTableTab('peptides')">专属肽段库 (ALT-ORFs)</button>
+              <button class="tab-btn" id="tab-targets" onclick="setTableTab('targets')">疫苗候选靶点 (已验证)</button>
+              <button class="tab-btn" id="tab-tasks" onclick="setTableTab('tasks')">算法任务记录</button>
+            </div>
+
+            <!-- Table Toolbar (Filters & Search) -->
+            <div class="table-toolbar">
+              <div class="toolbar-filters" id="toolbar-filter-group">
+                <!-- Dropdown Cancer Filter -->
+                <select class="filter-select" id="filter-cancer" onchange="filterTable()">
+                  <option value="all">癌种: 全部</option>
+                  <option value="PDAC">胰腺癌 (PDAC)</option>
+                  <option value="TNBC">乳腺癌 (TNBC)</option>
+                  <option value="GBM">胶质母细胞瘤 (GBM)</option>
+                  <option value="NSCLC">非小细胞肺癌 (NSCLC)</option>
+                  <option value="HCC">肝癌 (HCC)</option>
+                  <option value="CRC">结直肠癌 (CRC)</option>
+                </select>
+
+                <!-- Dropdown HLA Filter -->
+                <select class="filter-select" id="filter-hla" onchange="filterTable()">
+                  <option value="all">HLA型: 全部</option>
+                  <option value="HLA-A*02:01">HLA-A*02:01</option>
+                  <option value="HLA-A*24:02">HLA-A*24:02</option>
+                  <option value="HLA-A*11:01">HLA-A*11:01</option>
+                </select>
+
+                <!-- Dropdown Evidence Level Filter -->
+                <select class="filter-select" id="filter-tier" onchange="filterTable()">
+                  <option value="all">证据层级: 全部</option>
+                  <option value="1A">Level 1A</option>
+                  <option value="1B">Level 1B</option>
+                  <option value="2A">Level 2A</option>
+                  <option value="2B">Level 2B</option>
+                </select>
+              </div>
+
+              <div class="toolbar-actions">
+                <div class="search-wrapper">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" class="search-input" id="search-sample" placeholder="搜索 ID/序列..." onkeyup="filterTable()" />
+                </div>
+                <button class="btn-export" onclick="alert('数据正在安全导出为CSV报表...')">
+                  <span>📥</span><span>导出</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Table Viewport -->
+            <div class="table-viewport">
+              <table class="custom-table" id="data-table">
+                <thead>
+                  <tr id="table-headers">
+                    <!-- Dynamic Headers will be rendered here -->
+                  </tr>
+                </thead>
+                <tbody id="sample-table-body">
+                  <!-- Dynamic Rows will be rendered here -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="table-footer">
+              <div>显示共 <span id="visible-count">8</span> / <span id="total-count">8</span> 条记录</div>
+              <ul class="pagination">
+                <li class="page-item active"><a href="javascript:void(0)">1</a></li>
+                <li class="page-item"><a href="javascript:void(0)">2</a></li>
+                <li class="page-item"><a href="javascript:void(0)">3</a></li>
+                <li class="page-item"><a href="javascript:void(0)">...</a></li>
+                <li class="page-item"><a href="javascript:void(0)">322</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Drawer Details Panel (Persistent on the right) -->
+          <div class="details-drawer">
+            <div class="drawer-title">
+              <span>🔍</span>候选靶点微观特征
+            </div>
+            
+            <div class="drawer-grid" id="drawer-content">
+              <!-- Dynamically rendered detailed information when clicking row -->
+            </div>
+            
+            <div class="drawer-actions">
+              <button class="btn-drawer-primary" onclick="alert('已将当前靶点细节推送到计算节点，正在生成蛋白质交互三维配体模拟...')">三维配体空间解离分析</button>
+              <button class="btn-drawer-secondary" onclick="alert('正在拉取患者完整的多组学证据链追溯视图...')">追踪证据原始数据链</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Row Widgets: SVG Charts & Progress bars -->
+        <div class="widgets-grid">
+          
+          <!-- Widget 1: Donut Chart -->
+          <div class="widget-card">
+            <div class="widget-title">
+              <span>生物学癌种分布</span>
+              <span class="widget-subtitle">样本比例</span>
+            </div>
+            <div class="donut-chart-container">
+              <svg viewBox="0 0 100 100" class="donut-svg" id="donut-chart">
+                <circle cx="50" cy="50" r="25" fill="transparent" stroke="#222b37" stroke-width="12"></circle>
+                <!-- Sage: 18%, Lavender: 16%, Blush: 14%, Cream: 12%, Blue: 10%, Gold: 8%, #b2c2b7: 6%, #5c6a7e: 16% -->
+                <!-- Circ: 157.08. Offset starts at 0, goes backwards. Rotate -90 makes it start at top -->
+                <circle id="donut-slice-pdac" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-sage)" stroke-width="12" stroke-dasharray="28.27 157" stroke-dashoffset="0" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-tnbc" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-lavender)" stroke-width="12" stroke-dasharray="25.13 157" stroke-dashoffset="-28.27" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-nsclc" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-blush)" stroke-width="12" stroke-dasharray="21.99 157" stroke-dashoffset="-53.4" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-hcc" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-cream)" stroke-width="12" stroke-dasharray="18.85 157" stroke-dashoffset="-75.39" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-gbm" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-blue)" stroke-width="12" stroke-dasharray="15.71 157" stroke-dashoffset="-94.24" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-crc" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="var(--morandi-gold)" stroke-width="12" stroke-dasharray="12.57 157" stroke-dashoffset="-109.95" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-ov" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="#a4b9ac" stroke-width="12" stroke-dasharray="9.42 157" stroke-dashoffset="-122.52" transform="rotate(-90 50 50)"></circle>
+                <circle id="donut-slice-other" class="chart-slice" cx="50" cy="50" r="25" fill="transparent" stroke="#5c6a7e" stroke-width="12" stroke-dasharray="25.13 157" stroke-dashoffset="-131.94" transform="rotate(-90 50 50)"></circle>
+                
+                <circle cx="50" cy="50" r="18" fill="var(--bg-card)"></circle>
+                <text x="50" y="47" text-anchor="middle" font-size="6" font-weight="900" fill="var(--text-primary)" id="donut-center-val">50,000+</text>
+                <text x="50" y="55" text-anchor="middle" font-size="4" font-weight="500" fill="var(--text-secondary)">肿瘤样本</text>
+              </svg>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-sage)"></span><span>PDAC 18%</span></div>
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-lavender)" id="legend-tnbc-text"></span><span>TNBC 16%</span></div>
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-blush)"></span><span>NSCLC 14%</span></div>
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-cream)"></span><span>HCC 12%</span></div>
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-blue)"></span><span>GBM 10%</span></div>
+              <div class="legend-item"><span class="legend-color" style="background: var(--morandi-gold)"></span><span>CRC 8%</span></div>
+            </div>
+          </div>
+
+          <!-- Widget 2: Line Area Chart -->
+          <div class="widget-card">
+            <div class="widget-title">
+              <span>临床级高置信度新抗原趋势 (近半年)</span>
+              <span class="widget-subtitle">数量 (株)</span>
+            </div>
+            <div class="trend-chart-container">
+              <svg viewBox="0 0 240 100" class="trend-svg">
+                <defs>
+                  <linearGradient id="trend-glow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--morandi-lavender)" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="var(--morandi-lavender)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <!-- Grids -->
+                <line x1="20" y1="20" x2="220" y2="20" stroke="#222b37" stroke-width="0.5" stroke-dasharray="2 2" />
+                <line x1="20" y1="45" x2="220" y2="45" stroke="#222b37" stroke-width="0.5" stroke-dasharray="2 2" />
+                <line x1="20" y1="70" x2="220" y2="70" stroke="#222b37" stroke-width="0.5" stroke-dasharray="2 2" />
+                <line x1="20" y1="90" x2="220" y2="90" stroke="#2c3543" stroke-width="1" />
+                
+                <!-- Fill Area -->
+                <path id="trend-fill" d="M 20 80 C 45 78, 60 62, 85 58 C 110 54, 130 42, 155 35 C 180 28, 195 24, 220 20 L 220 90 L 20 90 Z" fill="url(#trend-glow)" />
+                
+                <!-- Curve Line -->
+                <path id="trend-line" d="M 20 80 C 45 78, 60 62, 85 58 C 110 54, 130 42, 155 35 C 180 28, 195 24, 220 20" fill="none" stroke="var(--morandi-lavender)" stroke-width="2" class="trend-line" />
+                
+                <!-- Markers -->
+                <circle cx="20" cy="80" r="3.5" fill="var(--bg-card)" stroke="var(--morandi-lavender)" stroke-width="1.5" class="chart-marker" />
+                <circle cx="85" cy="58" r="3.5" fill="var(--bg-card)" stroke="var(--morandi-lavender)" stroke-width="1.5" class="chart-marker" />
+                <circle cx="155" cy="35" r="3.5" fill="var(--bg-card)" stroke="var(--morandi-lavender)" stroke-width="1.5" class="chart-marker" />
+                <circle id="chart-marker-latest" cx="220" cy="20" r="3.5" fill="var(--bg-card)" stroke="var(--morandi-lavender)" stroke-width="1.5" class="chart-marker" />
+                
+                <!-- X labels -->
+                <text x="20" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-muted)">12月</text>
+                <text x="52" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-muted)">1月</text>
+                <text x="85" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-muted)">2月</text>
+                <text x="120" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-muted)">3月</text>
+                <text x="155" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-muted)">4月</text>
+                <text x="220" y="98" text-anchor="middle" font-size="5.5" fill="var(--text-accent)" id="latest-month-label">5月</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Widget 3: Engine Pipeline Progress -->
+          <div class="widget-card">
+            <div class="widget-title">
+              <span>当前管线运行负载</span>
+              <span class="widget-subtitle">实时监控</span>
+            </div>
+            <div class="task-progress-list">
+              <div class="tp-item">
+                <div class="tp-header"><span>WGS 测序变异检测</span><span>96%</span></div>
+                <div class="tp-bar-bg"><div class="tp-bar-fill tpf-blue" style="width: 96%"></div></div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-header"><span>RNA-seq 表达丰度比对</span><span>92%</span></div>
+                <div class="tp-bar-bg"><div class="tp-bar-fill tpf-lavender" style="width: 92%"></div></div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-header"><span>非经典抗原表位提取</span><span>86%</span></div>
+                <div class="tp-bar-bg"><div class="tp-bar-fill tpf-blush" style="width: 86%"></div></div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-header"><span>MHC-I/II 结合动力学预测</span><span>75%</span></div>
+                <div class="tp-bar-bg"><div class="tp-bar-fill tpf-sage" style="width: 75%"></div></div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-header"><span>主动学习图谱校准</span><span>63%</span></div>
+                <div class="tp-bar-bg"><div class="tp-bar-fill tpf-gold" style="width: 63%"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Flow Diagram Area (Active Learning Pipeline Showcase & Simulation Trigger) -->
+        <div class="flow-widget-container">
+          <div class="flow-header">
+            <div class="flow-title">EpitopeRank™ "检索-排序-重排" 主动学习循环系统</div>
+            <!-- Click to trigger modal simulation -->
+            <button class="btn-trigger-pipeline" onclick="openPipelineModal()">
+              <span>🧬</span>
+              <span>上传患者样本进行分析</span>
+            </button>
+          </div>
+          
+          <div class="pipeline-flow">
+            <div class="flow-step-card completed" id="flow-step-1">
+              <div class="step-icon">🧪</div>
+              <div class="step-name">1. 样本测序输入</div>
+              <div class="step-desc">提取患者 WES/RNA 原始测序 Fastq 序列及 HLA 分型数据</div>
+            </div>
+            
+            <div class="flow-step-card completed" id="flow-step-2">
+              <div class="step-icon">🧬</div>
+              <div class="step-name">2. 多组学分析</div>
+              <div class="step-desc">基于全转录组，深度挖掘非经典 ORF（UTR / lncRNA / circRNA）表位</div>
+            </div>
+            
+            <div class="flow-step-card completed" id="flow-step-3">
+              <div class="step-icon">📦</div>
+              <div class="step-name">3. LRDB 知识库初筛</div>
+              <div class="step-desc">与 325,000+ 专属非经典免疫反应条目（LRDB）进行匹配过滤</div>
+            </div>
+            
+            <div class="flow-step-card" id="flow-step-4">
+              <div class="step-icon">🛰️</div>
+              <div class="step-name">4. GNN 关联排序</div>
+              <div class="step-desc">构建五节点异构知识图谱，通过多证据加权融合图神经网络计算 Rank 分数</div>
+            </div>
+            
+            <div class="flow-step-card" id="flow-step-5">
+              <div class="step-icon">📊</div>
+              <div class="step-name">5. 临床靶点决策</div>
+              <div class="step-desc">计算不确定性，智能输出置信区间，推荐前 Top-K 验证靶点清单</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       VIEW 2: PITCH DECK PRESENTATION VIEW
+       ========================================================================= -->
+  <main class="view-container" id="view-pitch">
+    <div class="pitch-layout">
+      <!-- Pitch Deck Controls and View Selector -->
+      <div class="pitch-controls">
+        <div class="pitch-mode-toggle">
+          <button class="pm-btn active" id="pm-btn-slide" onclick="setPitchSubMode('slide')">🎬 幻灯片演示模式</button>
+          <button class="pm-btn" id="pm-btn-long" onclick="setPitchSubMode('long')">📖 商业计划书精读模式</button>
+        </div>
+        
+        <div class="pitch-nav-buttons" id="slide-navigation-controls">
+          <button class="btn-slide-nav" id="btn-prev-slide" onclick="changeSlide(-1)">◀</button>
+          <span class="slide-page-indicator" id="slide-indicator">第 1 / 10 页</span>
+          <button class="btn-slide-nav" id="btn-next-slide" onclick="changeSlide(1)">▶</button>
+        </div>
+      </div>
+
+      <!-- A. Slide View Mode -->
+      <div class="pitch-slider-container" id="pitch-slide-mode">
+        
+        <!-- Slide 1: Cover -->
+        <div class="slide-view active" id="slide-1">
+          <div class="slide-header">
+            <span class="slide-category">创新创业大赛创业计划书 | 医疗生物科技</span>
+            <span class="slide-badge">第12届创新创业大赛</span>
+          </div>
+          <div class="slide-content-area cover-slide">
+            <div class="cover-badge">🏆 2026年瑞士日内瓦国际发明展双金奖项目</div>
+            <h1 class="cover-title">EpitopeRank</h1>
+            <p class="cover-tagline">基于知识图谱的新抗原多证据融合优选决策引擎</p>
+            <div class="cover-team-row">
+              <div class="ctr-item"><strong>王子玮</strong> <span>香港中文大学 外科学博士生<br/>前BGI Research研究员 (4年+)</span></div>
+              <div class="ctr-item"><strong>王婷彧</strong> <span>香港城市大学 生物统计硕士<br/>前医库数据生信工程师</span></div>
+              <div class="ctr-item"><strong>钟明</strong> <span>华西国家重点实验室助理<br/>中大理学硕士 / 细胞制备专家</span></div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>© CUHK Medicine & AuroraEpitope Co-development</span>
+            <span>按键盘 ◀ ▶ 方向键可进行切页</span>
+          </div>
+        </div>
+
+        <!-- Slide 2: Industry Pain Points -->
+        <div class="slide-view" id="slide-2">
+          <div class="slide-header">
+            <span class="slide-category">行业痛点与临床需求 | Industry Pain Points</span>
+            <span class="slide-badge">为什么需要 EpitopeRank？</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="pitch-grid-2">
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <h4 style="color: var(--morandi-lavender); font-size: 15px; font-weight: 700;">传统肿瘤新抗原优选管线的局限：</h4>
+                <ul class="bp-bullet-list">
+                  <li><strong>忽略非经典 ORF 翻译表位</strong>：传统算法集中于 coding 突变，遗漏占实际免疫应答 30%-50% 的 UTR/lncRNA/circRNA 等非经典表达新抗原。</li>
+                  <li><strong>多组学数据“孤岛化”严重</strong>：质谱肽组学、TCR测序和生物物理预测等各自为战，缺乏大图谱统一证据整合。</li>
+                  <li><strong>“预测准” &ne; “选得对”</strong>：现有工具优化的是 binary classification (AUC)，而临床医生需要的是挑出 Top-K 表位的精准排序决策。</li>
+                </ul>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="bp-highlight-quote">
+                  "新抗原的高维排序是临床疫苗设计的最终瓶颈，而非简单的亲和力分类检测。"
+                </div>
+                <h4 style="color: var(--text-secondary); font-size: 12px; font-weight: 700;">顶刊学术证据：</h4>
+                <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4; display: flex; flex-direction: column; gap: 6px;">
+                  <p>📖 <strong>TESLA Consortium, Cell 2020</strong>: 单一的 MHC 结合亲和力预测无法准确推断体内的免疫原性。</p>
+                  <p>📖 <strong>NeoDisc, Nat Biotech 2024</strong>: 需要整合多组学关联与证据链权重，开发主动决策引擎。</p>
+                  <p>📖 <strong>UniPMT, Nat Mach Intell 2025</strong>: 图神经网络建模在 MHC-Peptide-TCR 关系推断中展现显著优越性。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 2 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 3: Solution -->
+        <div class="slide-view" id="slide-3">
+          <div class="slide-header">
+            <span class="slide-category">我们的解决方案 | Solution</span>
+            <span class="slide-badge">检索-排序-重排范式</span>
+          </div>
+          <div class="slide-content-area" style="gap: 16px;">
+            <div class="bp-highlight-quote" style="border-left-color: var(--morandi-sage); background: rgba(139, 162, 147, 0.05);">
+              <strong>首创 Retrieve-Rank-Rerank 三阶段优选架构</strong>：不是又一个普通的预测器，而是第一个为湿实验验证成功率深度优化的临床决策引擎。
+            </div>
+            <div class="pitch-grid-3">
+              <div class="pitch-card-box">
+                <div class="pcb-icon">🔍</div>
+                <div class="pcb-title">1. 检索阶段 (Retrieve)</div>
+                <div class="pcb-desc">整合覆盖 UTR / lncRNA / circRNA 的 325K+ 非经典表位 LRDB 专属大数据库，实现候选靶点的高维高灵敏初筛。</div>
+              </div>
+              <div class="pitch-card-box">
+                <div class="pcb-icon">🛰️</div>
+                <div class="pcb-title">2. 排序阶段 (Rank)</div>
+                <div class="pcb-desc">首创五节点异构知识图谱，通过多证据加权融合图神经网络，预测可解释的 GNN 置信度 Rank Score。</div>
+              </div>
+              <div class="pitch-card-box">
+                <div class="pcb-icon">🔄</div>
+                <div class="pitch-title">3. 重排阶段 (Rerank)</div>
+                <div class="pcb-desc">打通闭环主动学习机制。将体内外 ELISpot 和 T细胞激活的验证数据实时回流，在线自适应校准模型权重。</div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 3 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 4: Core Technology -->
+        <div class="slide-view" id="slide-4">
+          <div class="slide-header">
+            <span class="slide-category">核心技术与壁垒 | Core Technology</span>
+            <span class="slide-badge">五节点异构图神经网络</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="pitch-grid-2">
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <h4 style="color: var(--morandi-lavender); font-size: 14px; font-weight: 700;">五节点异构知识图谱设计：</h4>
+                <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">不同于最接近竞品 UniPMT 局限的 3 节点图，EpitopeRank 构建了涵盖：<strong style="color: var(--morandi-cream);">Peptide (肽段) · HLA (等位基因) · Sample (患者样本) · Study (临床队列) · TCR (受体谱)</strong> 5个维度的生物学大图谱，从机制上融合突变关联、宿主免疫态及文献既往知识。</p>
+                
+                <h4 style="color: var(--morandi-sage); font-size: 14px; font-weight: 700; margin-top: 8px;">四层显式证据评级体系 (Level A-D)：</h4>
+                <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.4; display: flex; flex-direction: column; gap: 4px;">
+                  <p>🟩 <strong>Level A (最高权重)</strong>: 湿实验金标准验证（ELISpot/胞内因子染色/体内小鼠肿瘤抑制）</p>
+                  <p>🟦 <strong>Level B (中高权重)</strong>: 转录组高表达支持（TPM &ge; 30）或质谱免疫肽组学 PSMs 支持</p>
+                  <p>🟨 <strong>Level C (中等权重)</strong>: 物理结合能预测分数（MHC binding affinity / processing score）</p>
+                  <p>⬜ <strong>Level D (基础权重)</strong>: 文献文本挖掘提取 / Hotspot 共有突变注释</p>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: center;">
+                <!-- 5 Node GNN Graphic -->
+                <svg viewBox="0 0 160 160" style="width: 140px; height: 140px;">
+                  <circle cx="80" cy="80" r="14" fill="var(--bg-active)" stroke="var(--morandi-lavender)" stroke-width="1.5" />
+                  <text x="80" y="83" text-anchor="middle" font-size="7" font-weight="bold" fill="var(--text-primary)">Peptide</text>
+                  
+                  <circle cx="80" cy="20" r="12" fill="var(--bg-active)" stroke="var(--morandi-sage)" stroke-width="1.5" />
+                  <text x="80" y="23" text-anchor="middle" font-size="6" font-weight="bold" fill="var(--text-primary)">HLA</text>
+                  
+                  <circle cx="130" cy="60" r="12" fill="var(--bg-active)" stroke="var(--morandi-blush)" stroke-width="1.5" />
+                  <text x="130" y="63" text-anchor="middle" font-size="6" font-weight="bold" fill="var(--text-primary)">Sample</text>
+                  
+                  <circle cx="110" cy="130" r="12" fill="var(--bg-active)" stroke="var(--morandi-blue)" stroke-width="1.5" />
+                  <text x="110" y="133" text-anchor="middle" font-size="6" font-weight="bold" fill="var(--text-primary)">TCR</text>
+                  
+                  <circle cx="35" cy="100" r="12" fill="var(--bg-active)" stroke="var(--morandi-gold)" stroke-width="1.5" />
+                  <text x="35" y="103" text-anchor="middle" font-size="6" font-weight="bold" fill="var(--text-primary)">Study</text>
+                  
+                  <!-- Connections -->
+                  <line x1="80" y1="66" x2="80" y2="32" stroke="var(--border-slate)" stroke-width="1" />
+                  <line x1="94" y1="74" x2="119" y2="67" stroke="var(--border-slate)" stroke-width="1" />
+                  <line x1="88" y1="91" x2="103" y2="119" stroke="var(--border-slate)" stroke-width="1" />
+                  <line x1="68" y1="85" x2="45" y2="94" stroke="var(--border-slate)" stroke-width="1" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 4 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 5: Core Team -->
+        <div class="slide-view" id="slide-5">
+          <div class="slide-header">
+            <span class="slide-category">核心团队力量 | Core Team</span>
+            <span class="slide-badge">算法 + 实验 + 生信三位一体</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="bp-team-grid">
+              
+              <!-- Ziwei Wang -->
+              <div class="bp-team-card">
+                <img src="resources/王子玮.jpg" class="bp-avatar" alt="王子玮" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>子玮</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王子玮 (CEO & 算法)</div>
+                  <div class="bpm-role">港中文医学院外科学博士生</div>
+                  <div class="bpm-inst">前华大基因研究院助理研究员 (4年+)</div>
+                  <div class="bpm-bio">DL预测免疫表位专家，Cell Reports Med 共一作者，学者总引用 1000+。</div>
+                </div>
+              </div>
+
+              <!-- Tingyu Wang -->
+              <div class="bp-team-card">
+                <img src="resources/王婷彧.jpg" class="bp-avatar" alt="王婷彧" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>婷彧</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王婷彧 (生信与数据负责人)</div>
+                  <div class="bpm-role">城大生物统计学硕士</div>
+                  <div class="bpm-inst">前医库数据生信工程师</div>
+                  <div class="bpm-bio">单细胞测序多组学分析专家，胃癌T细胞异质性学术论文在投。</div>
+                </div>
+              </div>
+
+              <!-- Ming Zhong -->
+              <div class="bp-team-card">
+                <img src="resources/钟明.png" class="bp-avatar" alt="钟明" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>钟明</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">钟明 (实验生物学)</div>
+                  <div class="bpm-role">华西医院国重室助理 / 中大MSc</div>
+                  <div class="bpm-inst">前豪石生物研发细胞技术员</div>
+                  <div class="bpm-bio">CAR-T与免疫治疗专家，Eur J Pharm Sci 一作，打通体外及体内疫苗评估。</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 5 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 6: Advisory Board -->
+        <div class="slide-view" id="slide-6">
+          <div class="slide-header">
+            <span class="slide-category">顶尖科学顾问团 | Advisory Board</span>
+            <span class="slide-badge">8位中港英新及中科院顶级大牛</span>
+          </div>
+          <div class="slide-content-area" style="justify-content: flex-start; overflow-y: auto;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 11px;">
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/王鑫.jpg" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>王鑫</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">王鑫 教授 (首席科学顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">中大医学院副教授 (终身)</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/王宪赓.png" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>宪赓</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">王宪赓 博士 (产业顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">Aurora CEO / Geneva Gold x2</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/汪铭.png" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>汪铭</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">汪铭 研究员 (递送顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">中科院教授 / 国家杰青获得者</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/张维敏.jpg" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>维敏</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">张维敏 教授 (肿瘤学顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">北大肿瘤实验室 / 北京杰青</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/罗添利.jpeg" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>添利</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">罗添利 博士 (转化顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">北大肿瘤医院副研 / 院士课题组</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/史家海.png" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>家海</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">史家海 教授 (创业顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">新国大助理教授 / 连续创业者</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/顾晓燕.png" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>晓燕</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">顾晓燕 博士 (转化顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">阿斯利康全球 Science Lead</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:8px; gap:8px;">
+                <img src="resources/高峰.jpeg" class="bp-avatar" style="width:36px; height:36px;" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>高峰</text></svg>';" />
+                <div>
+                  <strong style="font-size:11px;">高峰 教授 (医学AI顾问)</strong>
+                  <div style="font-size:9px; color:var(--text-secondary);">中大附六医院教授 / 上海AI实验室</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 6 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 7: Market Analysis -->
+        <div class="slide-view" id="slide-7">
+          <div class="slide-header">
+            <span class="slide-category">市场前景与客户分层 | Market & Customers</span>
+            <span class="slide-badge">TAM / SAM / SOM 分析</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="pitch-grid-2">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="color: var(--morandi-lavender); font-size: 14px; font-weight: 700;">三层漏斗市场规模估算：</h4>
+                <ul class="bp-bullet-list">
+                  <li><strong>TAM (全球癌症疫苗市场) — $40 Billion</strong>：全球癌症疫苗开发及肿瘤个性化免疫治疗与软件系统授权的大盘空间。</li>
+                  <li><strong>SAM (专属服务市场) — $8 Billion</strong>：全球非经典表位发现服务、生信数据库订阅及精准伴随筛选软件市场。</li>
+                  <li><strong>SOM (近期可达市场) — $50M - $200 Million</strong>：聚焦东亚人种高频 HLA-A*24:02 单倍型，前三年聚焦胰腺癌与三阴乳腺癌疫苗开发服务。</li>
+                </ul>
+              </div>
+              <div>
+                <h4 style="color: var(--morandi-sage); font-size: 14px; font-weight: 700; margin-bottom: 8px;">三大梯队目标客户定位：</h4>
+                <table class="slide-table">
+                  <thead>
+                    <tr>
+                      <th>客户层级</th>
+                      <th>目标群体</th>
+                      <th>核心客单价与服务模式</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="color: var(--morandi-lavender); font-weight: bold;">Tier 1</td>
+                      <td>大型跨国制药企业 (如 AZ)</td>
+                      <td>$5M-$30M 专属技术管线授权 + 2%-8% 销售抽成</td>
+                    </tr>
+                    <tr>
+                      <td style="color: var(--morandi-sage); font-weight: bold;">Tier 2</td>
+                      <td>顶尖医院与学术科研所</td>
+                      <td>年费 $50K-$100K 数据库专属账号 API 检索订阅</td>
+                    </tr>
+                    <tr>
+                      <td style="color: var(--morandi-blush); font-weight: bold;">Tier 3</td>
+                      <td>晚期个性化特需临床患者</td>
+                      <td>单次测序数据 $5K-$10K 一键多组学筛查排序服务</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 7 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 8: Business Model -->
+        <div class="slide-view" id="slide-8">
+          <div class="slide-header">
+            <span class="slide-category">商业模式与营收预测 | Business Model & Financials</span>
+            <span class="slide-badge">高附加值高毛利数据引擎</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="pitch-grid-2">
+              <div>
+                <h4 style="color: var(--morandi-lavender); font-size: 14px; font-weight: 700; margin-bottom: 8px;">五阶段商业营收增长预测：</h4>
+                <table class="slide-table" style="font-size: 10px;">
+                  <thead>
+                    <tr>
+                      <th>年度</th>
+                      <th>首选营收主力</th>
+                      <th>预计年营业额</th>
+                      <th>预计综合毛利率</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>第一年 (Y1)</td>
+                      <td>患者个性化筛查服务 (30-50例)</td>
+                      <td>$285,000</td>
+                      <td>30% (涉及测序成本)</td>
+                    </tr>
+                    <tr>
+                      <td>第二年 (Y2)</td>
+                      <td>科研订阅中心 (12-24个机构)</td>
+                      <td>$1.20 Million</td>
+                      <td>55% (SaaS 账号授权)</td>
+                    </tr>
+                    <tr>
+                      <td>第三年 (Y3)</td>
+                      <td>企业管线专属授权 (2-3个药企)</td>
+                      <td>$16.60 Million</td>
+                      <td>70%+ (纯软件数字资产)</td>
+                    </tr>
+                    <tr>
+                      <td>第四年 (Y4)</td>
+                      <td>伴随决策云平台普及</td>
+                      <td>$28.50 Million</td>
+                      <td>75%+</td>
+                    </tr>
+                    <tr>
+                      <td>第五年 (Y5)</td>
+                      <td>药企销售 royalty 回流</td>
+                      <td>$48.00 Million</td>
+                      <td>80%+</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="color: var(--morandi-sage); font-size: 14px; font-weight: 700;">GTM 市场准入四步走策略：</h4>
+                <ul class="bp-bullet-list">
+                  <li><strong>学术筑基</strong>：通过顶尖学术期刊发表多组学非经典 GNN 排序成果，在生物医学界形成学术共识。</li>
+                  <li><strong>共同开发</strong>：与深度设计合作伙伴 AuroraEpitope 强强联合，输出经湿实验金标准验证的高价值抗原报告。</li>
+                  <li><strong>展会亮相</strong>：积极参展 AACR、SITC 等顶级肿瘤免疫年会，快速触达国际药企 R&D 买家。</li>
+                  <li><strong>免费试用转化</strong>：为核心机构提供 5-10 例的免费试用，展示其 Top-K 临床命中率相较于传统 NetMHCpan 的范式级超越。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 8 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 9: R&D Wall and Awards -->
+        <div class="slide-view" id="slide-9">
+          <div class="slide-header">
+            <span class="slide-category">科学验证与资金储备 | Validation & Capital</span>
+            <span class="slide-badge">扎实的研发护城河</span>
+          </div>
+          <div class="slide-content-area">
+            <div class="pitch-grid-2">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="color: var(--morandi-lavender); font-size: 14px; font-weight: 700;">湿实验金标准验证与专利：</h4>
+                <ul class="bp-bullet-list">
+                  <li><strong>T 细胞激活响应率高达 48.3% – 70%</strong>：在胰腺癌 (PDAC) 与三阴乳腺癌 (TNBC) 患者的体内外肿瘤免疫实验中，优选出的靶点达到极高响应水平。</li>
+                  <li><strong>2项美国授权专利 (US Patents)</strong>：围绕非经典抗原表位提取与深度图排序核心算法构建了坚实的 IP 壁垒。</li>
+                  <li><strong>顶级论文</strong>：Cell Reports Medicine 共一发表、Eur J Pharm Sci 一作发表，另有 3 篇在投（Nature Genetics 等）。</li>
+                </ul>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <h4 style="color: var(--morandi-sage); font-size: 14px; font-weight: 700;">获得非稀释性政府创业资金：</h4>
+                <div class="bp-highlight-quote" style="border-left-color: var(--morandi-sage); background: rgba(139, 162, 147, 0.05); font-size: 12px;">
+                  💸 <strong>TSSSU 科技基金 (CUHK) — 6,000,000 港元 (4年)</strong>：已获官方批准拨付的香港政府特区高校创业最大额度基金资助。<br/><br/>
+                  💸 <strong>IdeaBooster Fund — 100,000 港元</strong>：已正式到账。
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 9 / 10 页</span>
+          </div>
+        </div>
+
+        <!-- Slide 10: Timeline -->
+        <div class="slide-view" id="slide-10">
+          <div class="slide-header">
+            <span class="slide-category">项目发展规划时间线 | Timeline</span>
+            <span class="slide-badge">精细化业务时间节点</span>
+          </div>
+          <div class="slide-content-area" style="justify-content: center; gap: 20px;">
+            <div class="bp-timeline-row">
+              <div class="bp-timeline-node completed">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q2 2024</div>
+                <div class="bt-title">概念起源<br/>项目立项</div>
+              </div>
+              <div class="bp-timeline-node completed">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q4 2024</div>
+                <div class="bt-title">算法原型完成<br/>数据清洗比对</div>
+              </div>
+              <div class="bp-timeline-node completed">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q2 2025</div>
+                <div class="bt-title">体外细胞实验<br/>DO-PDAC101</div>
+              </div>
+              <div class="bp-timeline-node completed">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q4 2025</div>
+                <div class="bt-title">授权2项美专<br/>TSSSU 6M获批</div>
+              </div>
+              <div class="bp-timeline-node active">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q2 2026</div>
+                <div class="bt-title">挑战杯参赛<br/>系统剥离产品化</div>
+              </div>
+              <div class="bp-timeline-node">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q4 2026</div>
+                <div class="bt-title">发布评估基准<br/>主动图谱定型</div>
+              </div>
+              <div class="bp-timeline-node">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q1 2027</div>
+                <div class="bt-title">Web Portal<br/>公测 launch</div>
+              </div>
+              <div class="bp-timeline-node">
+                <div class="bt-dot"></div>
+                <div class="bt-date">Q3 2027</div>
+                <div class="bt-title">签首单大型药企<br/>商业销售扩量</div>
+              </div>
+            </div>
+            <p style="text-align: center; font-size: 11px; color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.4;">
+              * 团队已完成算法架构设计及首期体外验证。目前正重点攻关五节点知识图谱系统构建与首单药企对接谈判。
+            </p>
+          </div>
+          <div class="slide-footer">
+            <span>EpitopeRank BP Presentation</span>
+            <span>第 10 / 10 页</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- B. Long-read BP view Mode (Hidden by default) -->
+      <div class="long-read-container" id="pitch-long-mode" style="display: none;">
+        <!-- Left Sticky navigation bar -->
+        <nav class="long-read-nav">
+          <li class="lr-nav-item active"><a href="#lr-sec-1">1. 项目大纲</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-2">2. 行业痛点</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-3">3. 解决方案</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-4">4. 核心技术</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-5">5. 核心团队</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-6">6. 专家顾问</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-7">7. 市场分析</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-8">8. 商业模式</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-9">9. 科学底蕴</a></li>
+          <li class="lr-nav-item"><a href="#lr-sec-10">10. 路线图</a></li>
+        </nav>
+
+        <!-- Right Content Area -->
+        <div class="long-read-sections">
+          
+          <!-- Sec 1 -->
+          <section class="lr-section" id="lr-sec-1">
+            <h3 class="lr-sec-title"><span>01</span>项目大纲 | Project Summary</h3>
+            <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+              <strong>EpitopeRank</strong> 是针对肿瘤新抗原开发设计的、具有突破性的高维多证据融合决策与排序引擎。传统的生信管线只关注 MHC 亲和力，且在编码区域突变预测之外束手无策。本算法从底层重新定义任务目标，聚焦于提高湿实验的 Top-K 成功率。依托 325,000+ 非经典免疫表位专属数据库 (LRDB)、五节点异构知识图谱及自研图神经网络架构，项目打通了非经典 ORF 挖掘、智能排序与湿实验主动学习重排的完整链条，已获得 6M TSSSU 香港特区政府大额非稀释性资助及瑞士日内瓦国际发明展双金奖殊荣。
+            </p>
+          </section>
+
+          <!-- Sec 2 -->
+          <section class="lr-section" id="lr-sec-2">
+            <h3 class="lr-sec-title"><span>02</span>临床痛点 | Industry Pain Points</h3>
+            <div class="lr-grid-2">
+              <div class="lr-card">
+                <strong style="color: var(--morandi-lavender); font-size: 14px; display: block; margin-bottom: 6px;">1. 非经典区突变表位被冷落</strong>
+                <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">现有管线只筛查经典的编码区突变，但占据临床肿瘤实际免疫反应 30%-50% 的 UTR、lncRNA、circRNA 等非经典转录本翻译产物（ALT-ORFs）几乎完全被忽略，形成巨大的“信息盲区”。</p>
+              </div>
+              <div class="lr-card">
+                <strong style="color: var(--morandi-sage); font-size: 14px; display: block; margin-bottom: 6px;">2. 评价指标偏离临床实际</strong>
+                <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">传统的分类模型以 AUC、ROC 为主要目标，即评价“亲和力强不强”。但在临床上，患者免疫接种只能选择 10-20 个肽段，医生真正需要的是 Top-K 个肽段能在湿实验里被 T 细胞识别的最终命中排序。</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Sec 3 -->
+          <section class="lr-section" id="lr-sec-3">
+            <h3 class="lr-sec-title"><span>03</span>核心创新 | Our Solution</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              我们抛弃了主流工具“又一个结合强弱分类器”的同质化路线，首创了新抗原领域的<strong>检索 (Retrieve) - 排序 (Rank) - 重排 (Rerank)</strong> 推荐系统决策引擎。在检索阶段，利用 UTR/lncRNA/circRNA 等全转录组的非经典数据库进行地毯式初筛；在排序阶段，利用图神经网络进行高维证据建模；在重排阶段，将湿实验得到的反应数据自动接入主动学习机制，实现决策大脑的动态调优。
+            </p>
+          </section>
+
+          <!-- Sec 4 -->
+          <section class="lr-section" id="lr-sec-4">
+            <h3 class="lr-sec-title"><span>04</span>图谱架构与层级 | Core Technology</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              EpitopeRank 引入了更强大的<strong>五节点异构知识大图谱</strong>，将 Peptide (肽段) · HLA (基因型) · Sample (患者样本) · Study (临床队列) · TCR (免疫受体谱) 五大生物学术语节点进行关联建边。系统内置了循证医学四级证据权重系统 (Level A-D)，将湿实验验证 (Level A)、多组学质谱测序 (Level B)、结合物理预测 (Level C)、文献文本挖掘 (Level D) 进行多物理场自适应融合，提供高可解释性的不确定性估计，并为每一个候选靶点附带置信区间。
+            </p>
+          </section>
+
+          <!-- Sec 5 -->
+          <section class="lr-section" id="lr-sec-5">
+            <h3 class="lr-sec-title"><span>05</span>核心团队 | Team Profile</h3>
+            <div class="lr-team-grid">
+              <div class="bp-team-card">
+                <img src="resources/王子玮.jpg" class="bp-avatar" alt="王子玮" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>子玮</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王子玮 (CEO & 首席算法)</div>
+                  <div class="bpm-role">香港中文大学医学院外科学博士在读</div>
+                  <div class="bpm-bio">前华大基因研究院助理研究员 (4年+)。长期从事 MHC-Peptide 结合动力学预测与大规模多组学深度学习建模。以共一作者在《Cell Reports Medicine》发表顶尖新抗原算法突破，累计学者总引用超过 1000 次。</div>
+                </div>
+              </div>
+              <div class="bp-team-card">
+                <img src="resources/王婷彧.jpg" class="bp-avatar" alt="王婷彧" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>婷彧</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王婷彧 (生信与数据负责人)</div>
+                  <div class="bpm-role">香港城市大学生物统计学硕士</div>
+                  <div class="bpm-bio">前医库数据生信工程师。擅长单细胞测序多组学分析与新抗原计算管线设计，主导完成了算法的临床队列多维度数据建模，胃癌T细胞异质性学术论文在投。</div>
+                </div>
+              </div>
+              <div class="bp-team-card">
+                <img src="resources/钟明.png" class="bp-avatar" alt="钟明" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%23262e3a\'/><text x=\'50\' y=\'60\' font-size=\'32\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>钟明</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">钟明 (湿实验生物学负责人)</div>
+                  <div class="bpm-role">四川大学华西医院国家重点实验室助理</div>
+                  <div class="bpm-bio">香港中文大学理学硕士，前深圳豪石生物细胞制备核心技术员，精通 CAR-T/NK 免疫细胞构建与 ELISpot/流式细胞术/动物模型验证。以第一作者在《Eur J Pharm Sci》发表肺癌免疫细胞治疗成果。</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Sec 6 -->
+          <section class="lr-section" id="lr-sec-6">
+            <h3 class="lr-sec-title"><span>06</span>顾问团队 | Scientific Advisory Board</h3>
+            <div class="lr-advisor-grid">
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/王鑫.jpg" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>王鑫</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王鑫 教授</div>
+                  <div class="bpm-role">首席科学顾问</div>
+                  <div class="bpm-inst">CUHK 终身教授 / 剑桥 PhD / 哈佛博后</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/王宪赓.png" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>宪赓</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">王宪赓 博士</div>
+                  <div class="bpm-role">产业/创业顾问</div>
+                  <div class="bpm-inst">Aurora CEO / TSSSU 资助 / 日内瓦金奖</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/汪铭.png" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>汪铭</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">汪铭 研究员</div>
+                  <div class="bpm-role">药物研发顾问</div>
+                  <div class="bpm-inst">中科院教授 / 国家杰青 / 15年+ LNP经验</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/张维敏.jpg" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>维敏</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">张维敏 教授</div>
+                  <div class="bpm-role">肿瘤学专家</div>
+                  <div class="bpm-inst">北京大学肿瘤实验室 / 北京卓越青年</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/罗添利.jpeg" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>罗添利</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">罗添利 博士</div>
+                  <div class="bpm-role">转化医学顾问</div>
+                  <div class="bpm-inst">北大癌症医院副研 / 詹启敏院士博士组</div>
+                </div>
+              </div>
+              <div class="bp-team-card" style="padding:12px;">
+                <img src="resources/史家海.png" class="bp-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\' viewBox=\'0 0 50 50\'><circle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23262e3a\'/><text x=\'25\' y=\'30\' font-size=\'14\' font-weight=\'bold\' fill=\'%23ebdcd0\' text-anchor=\'middle\'>家海</text></svg>';" />
+                <div class="bp-member-info">
+                  <div class="bpm-name">史家海 教授</div>
+                  <div class="bpm-role">生物创业顾问</div>
+                  <div class="bpm-inst">新国大助理教授 / 连续成功创业者</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Sec 7 -->
+          <section class="lr-section" id="lr-sec-7">
+            <h3 class="lr-sec-title"><span>07</span>市场大盘 | Market Sizing</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              我们针对三大市场层次进行了扎实底下的估算：<strong>TAM 全球市场总额达 $40 Billion</strong> (覆盖全部免疫接种与诊断大盘)，<strong>SAM 表位筛选专属服务市场规模达 $8 Billion</strong>，以及前三年在亚洲人群高频 HLA-A*24:02 细分领域<strong>可望触达的 SOM 目标 $50M - $200 Million</strong>。系统细分出三大客户梯度，针对跨国巨头药企、临床研究所以及个体患者提供定制化的授权与软件云服务。
+            </p>
+          </section>
+
+          <!-- Sec 8 -->
+          <section class="lr-section" id="lr-sec-8">
+            <h3 class="lr-sec-title"><span>08</span>商业路径 | Business Model</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              EpitopeRank 具备清晰的盈利机制。包括：1. <strong>多组学单次运行分析筛查服务</strong> (单次 $5K-$10K)；2. <strong>高维非经典数据库订阅服务</strong> (年费 $50K-$100K/年)；3. <strong>药企管线专属授权与联合开发</strong> ($5M-$30M 一次性授权 + 销售抽成)。五年的财务模型表明，随着产品由重人工筛查走向轻资产 SaaS 授权，其综合毛利率将从 Y1 的 30% 爆发性增长至 Y3 的 70% 以上。
+            </p>
+          </section>
+
+          <!-- Sec 9 -->
+          <section class="lr-section" id="lr-sec-9">
+            <h3 class="lr-sec-title"><span>09</span>科学验证与政府资助 | Academic & Grants</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              技术在小鼠和患者外周血中的<strong>体内外 T细胞激活响应率达到 48.3% – 70%</strong> 的极高水准，彻底摆脱了同业大厂普遍卡脖子的“预测高分但体内不激活”困境。项目已获得香港特区政府大学科技初创企业资助计划 <strong>(TSSSU) 6,000,000 港元（4年分批非稀释资金）</strong> 批准，且香港中文大学的 100,000 港元 <strong>IdeaBooster 基金</strong> 已顺利到账。
+            </p>
+          </section>
+
+          <!-- Sec 10 -->
+          <section class="lr-section" id="lr-sec-10">
+            <h3 class="lr-sec-title"><span>10</span>路线图 | Timeline & Milestones</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+              团队计划于 2026 年 Q3 推出 5节点 GNN v1.0 定型版本，并在 Q4 发布非经典新抗原国际 Benchmark 评测集以确立行业话语权；2027 年 Q1 上线 Web 交互 Portal 面向科研用户开放公测，预计于 2027 年 Q3 正式与首单大型药企签署高附加值的企业级独占授权，进入跨越式发展的商业扩张期。
+            </p>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       ACTIVE LEARNING PIPELINE MODAL OVERLAY
+       ========================================================================= -->
+  <div class="modal-overlay" id="pipeline-modal" onclick="closePipelineModalOutside(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🧬 EpitopeRank™ 多组学新抗原分析管线</h3>
+        <button class="btn-close-modal" onclick="closePipelineModal()">✕</button>
+      </div>
+
+      <!-- State 1: Select/Upload File -->
+      <div class="modal-state active" id="modal-state-upload">
+        <div class="upload-area" onclick="triggerPipelineRun()">
+          <span class="upload-icon">📤</span>
+          <div class="upload-title">点击或拖拽测序数据文件至此上传</div>
+          <div class="upload-desc">支持 WES/WGS/RNA-seq FASTQ, BAM, VCF 或 HLA-typing 分型文件</div>
+        </div>
+        
+        <div class="preload-title">—— 或者 快速载入预设患者测序样本 ——</div>
+        
+        <div class="preload-buttons">
+          <button class="btn-preload" onclick="preloadAndRun('P089', 'PDAC')">
+            <span>载入预设样本 P089</span>
+            <span>癌种: 胰腺癌 (PDAC) | HLA-A*02:01</span>
+          </button>
+          <button class="btn-preload" onclick="preloadAndRun('P090', 'TNBC')">
+            <span>载入预设样本 P090</span>
+            <span>癌种: 乳腺癌 (TNBC) | HLA-A*24:02</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- State 2: Simulation Running Pipeline -->
+      <div class="modal-state" id="modal-state-running">
+        <div class="running-pipeline-steps">
+          
+          <div class="mps-step pending" id="mps-step-1">
+            <span class="mps-icon">1</span>
+            <div class="mps-detail">
+              <span class="mps-name">1. 样本测序读取</span>
+              <span class="mps-status-text" id="mps-status-1">等待中...</span>
+            </div>
+            <div class="mps-progress-container"><div class="mps-progress-fill" id="mps-progress-fill-1"></div></div>
+          </div>
+          
+          <div class="mps-step pending" id="mps-step-2">
+            <span class="mps-icon">2</span>
+            <div class="mps-detail">
+              <span class="mps-name">2. 非经典转录本翻译特征提取</span>
+              <span class="mps-status-text" id="mps-status-2">等待中...</span>
+            </div>
+            <div class="mps-progress-container"><div class="mps-progress-fill" id="mps-progress-fill-2"></div></div>
+          </div>
+          
+          <div class="mps-step pending" id="mps-step-3">
+            <span class="mps-icon">3</span>
+            <div class="mps-detail">
+              <span class="mps-name">3. LRDB 知识库免疫反应比对</span>
+              <span class="mps-status-text" id="mps-status-3">等待中...</span>
+            </div>
+            <div class="mps-progress-container"><div class="mps-progress-fill" id="mps-progress-fill-3"></div></div>
+          </div>
+          
+          <div class="mps-step pending" id="mps-step-4">
+            <span class="mps-icon">4</span>
+            <div class="mps-detail">
+              <span class="mps-name">4. 异构知识图谱权重计算 (GNN)</span>
+              <span class="mps-status-text" id="mps-status-4">等待中...</span>
+            </div>
+            <div class="mps-progress-container"><div class="mps-progress-fill" id="mps-progress-fill-4"></div></div>
+          </div>
+          
+          <div class="mps-step pending" id="mps-step-5">
+            <span class="mps-icon">5</span>
+            <div class="mps-detail">
+              <span class="mps-name">5. 不确定性估计与决策输出</span>
+              <span class="mps-status-text" id="mps-status-5">等待中...</span>
+            </div>
+            <div class="mps-progress-container"><div class="mps-progress-fill" id="mps-progress-fill-5"></div></div>
+          </div>
+
+        </div>
+
+        <div class="console-logs" id="console-logs">
+          <div class="log-line"><span class="log-time">[12:00:01]</span><span>EpitopeRank 引擎已就绪。等待输入数据流。</span></div>
+        </div>
+      </div>
+
+      <!-- State 3: Run Success Display -->
+      <div class="modal-state" id="modal-state-success">
+        <div class="success-panel">
+          <div class="success-ring">✓</div>
+          <div class="success-title">分析任务已成功完成！</div>
+          <div class="success-desc">
+            系统通过主动学习循环，在 <strong>P090 患者的三阴乳腺癌 (TNBC)</strong> 测序样本中成功锁定并排序出 <strong>1 个超高置信度</strong> 的全新非经典来源 (ALT-ORF) 疫苗靶点候选！
+          </div>
+          <div class="success-data-card">
+            <div class="sdc-header">
+              <span>新表位肽段特征推荐</span>
+              <span>置信度 Level 1A</span>
+            </div>
+            <div class="sdc-body">
+              <span class="sdc-pep" id="success-pep-seq">RYLDKLVPV</span>
+              <span class="sdc-score" id="success-pep-score">GNN Score: 0.942</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn-modal-primary" onclick="closeAndApplyPipeline()">关闭并同步回流至数据总览</button>
+      </div>
+
+    </div>
+  </div>
+
+  <footer style="text-align: center; padding: 24px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-slate); background: var(--bg-slate);">
+    EpitopeRank AI Platform · 第12届挑战杯医疗科技参赛项目 · Powered by AuroraEpitope Team
+  </footer>
+
+  <script>
+    // Global Datasets
+    const sampleData = [
+      { id: 'SMP-24-00001', cancer: 'PDAC', hla: 'HLA-A*02:01', peptides: '1,842', tier: '1A', confidence: '0.92', status: '已完成', date: '2024-05-20' },
+      { id: 'SMP-24-00002', cancer: 'TNBC', hla: 'HLA-A*02:01', peptides: '2,315', tier: '1A', confidence: '0.89', status: '已完成', date: '2024-05-20' },
+      { id: 'SMP-24-00003', cancer: 'GBM', hla: 'HLA-A*02:01', peptides: '1,284', tier: '1B', confidence: '0.86', status: '已完成', date: '2024-05-19' },
+      { id: 'SMP-24-00004', cancer: 'NSCLC', hla: 'HLA-A*24:02', peptides: '2,073', tier: '1A', confidence: '0.91', status: '已完成', date: '2024-05-19' },
+      { id: 'SMP-24-00005', cancer: 'HCC', hla: 'HLA-A*02:01', peptides: '1,580', tier: '1B', confidence: '0.83', status: '运行中', date: '2024-05-19' },
+      { id: 'SMP-24-00006', cancer: 'CRC', hla: 'HLA-A*11:01', peptides: '1,126', tier: '2A', confidence: '0.75', status: '已完成', date: '2024-05-18' },
+      { id: 'SMP-24-00007', cancer: 'OV', hla: 'HLA-A*02:01', peptides: '1,903', tier: '1A', confidence: '0.90', status: '已完成', date: '2024-05-18' },
+      { id: 'SMP-24-00008', cancer: 'GIC', hla: 'HLA-A*24:02', peptides: '987', tier: '2B', confidence: '0.68', status: '已完成', date: '2024-05-17' }
+    ];
+
+    const peptideData = [
+      { id: 'PEP-24-101', sequence: 'KLLEYLSV', transcript: 'ENST00000354587', orf: 'ALT-ORF', hla: 'HLA-A*02:01', score: '0.912', tier: '1A', status: '已完成' },
+      { id: 'PEP-24-102', sequence: 'SLYSFPEV', transcript: 'ENST00000423984', orf: 'ALT-ORF', hla: 'HLA-A*02:01', score: '0.887', tier: '1A', status: '已完成' },
+      { id: 'PEP-24-103', sequence: 'ALYGPVAGV', transcript: 'ENST00000298357', orf: '5\'UTR-ORF', hla: 'HLA-A*02:01', score: '0.856', tier: '1B', status: '已完成' },
+      { id: 'PEP-24-104', sequence: 'RYLDKLVPV', transcript: 'ENST00000512948', orf: 'lncRNA', hla: 'HLA-A*24:02', score: '0.903', tier: '1A', status: '已完成' },
+      { id: 'PEP-24-105', sequence: 'KVLEYLSVV', transcript: 'ENST00000354587', orf: 'ALT-ORF', hla: 'HLA-A*02:01', score: '0.824', tier: '1B', status: '运行中' },
+      { id: 'PEP-24-106', sequence: 'TYRGTFEGV', transcript: 'ENST00000311284', orf: 'circRNA', hla: 'HLA-A*11:01', score: '0.748', tier: '2A', status: '已完成' }
+    ];
+
+    const targetData = [
+      { id: 'DO-PDAC101', cancer: 'PDAC', hla: 'HLA-A*02:01', sequence: 'KLLEYLSV', tier: '1A', score: '0.92', detail: '细胞系+体内小鼠疫苗验证(肿瘤抑制率68%)' },
+      { id: 'DO-TNBC202', cancer: 'TNBC', hla: 'HLA-A*02:01', sequence: 'SLYSFPEV', tier: '1A', score: '0.89', detail: '外周血T细胞体外激活(响应率58%)' },
+      { id: 'DO-GBM303', cancer: 'GBM', hla: 'HLA-A*02:01', sequence: 'ALYGPVAGV', tier: '1B', score: '0.86', detail: '高分辨率质谱支持 (7 PSMs匹配)' },
+      { id: 'DO-NSCLC404', cancer: 'NSCLC', hla: 'HLA-A*24:02', sequence: 'RYLDKLVPV', tier: '1A', score: '0.91', detail: 'T细胞克隆型ELISpot定量激活(响应率70%)' },
+      { id: 'DO-HCC505', cancer: 'HCC', hla: 'HLA-A*02:01', sequence: 'KVLEYLSVV', tier: '1B', score: '0.83', detail: '患者队列配对多组学RNA转录丰度校准支持' }
+    ];
+
+    const taskData = [
+      { id: 'TSK-2026-0501', sampleId: 'SMP-24-00001', type: '多组学优选', status: '已完成', progress: '100%', time: '2026-05-20 11:24' },
+      { id: 'TSK-2026-0502', sampleId: 'SMP-24-00002', type: '多组学优选', status: '已完成', progress: '100%', time: '2026-05-20 10:45' },
+      { id: 'TSK-2026-0503', sampleId: 'SMP-24-00003', type: '多组学优选', status: '已完成', progress: '100%', time: '2026-05-19 18:30' },
+      { id: 'TSK-2026-0504', sampleId: 'SMP-24-00004', type: '多组学优选', status: '已完成', progress: '100%', time: '2026-05-19 15:12' },
+      { id: 'TSK-2026-0505', sampleId: 'SMP-24-00005', type: '多组学优选', status: '运行中', progress: '83%', time: '2026-05-19 14:00' },
+      { id: 'TSK-2026-0506', sampleId: 'SMP-24-00006', type: '多组学优选', status: '已完成', progress: '100%', time: '2026-05-18 16:55' }
+    ];
+
+    const microDetails = {
+      'SMP-24-00001': {
+        id: 'SMP-24-00001', cancer: '胰腺癌 (PDAC)', hla: 'HLA-A*02:01', sequence: 'KLLEYLSV',
+        transcript: 'ENST00000354587', orfType: 'ALT-ORF (非经典非传统ORF)', immunogenicity: 92,
+        expression: 32.4, msSupport: '7 (PSMs) 高分辨率质谱特征', rankScore: '0.912',
+        tier: '1A (湿实验最强证据级)', binding: 'HLA-A*02:01 (IC50 = 45.2 nM 结合能)'
+      },
+      'SMP-24-00002': {
+        id: 'SMP-24-00002', cancer: '乳腺癌 (TNBC)', hla: 'HLA-A*02:01', sequence: 'SLYSFPEV',
+        transcript: 'ENST00000423984', orfType: 'ALT-ORF', immunogenicity: 89,
+        expression: 28.1, msSupport: '5 (PSMs)', rankScore: '0.887',
+        tier: '1A', binding: 'HLA-A*02:01 (IC50 = 58.7 nM)'
+      },
+      'SMP-24-00003': {
+        id: 'SMP-24-00003', cancer: '胶质瘤 (GBM)', hla: 'HLA-A*02:01', sequence: 'ALYGPVAGV',
+        transcript: 'ENST00000298357', orfType: '5\'UTR-ORF', immunogenicity: 86,
+        expression: 18.9, msSupport: '7 (PSMs)', rankScore: '0.856',
+        tier: '1B', binding: 'HLA-A*02:01 (IC50 = 62.4 nM)'
+      },
+      'SMP-24-00004': {
+        id: 'SMP-24-00004', cancer: '非小细胞肺癌 (NSCLC)', hla: 'HLA-A*24:02', sequence: 'RYLDKLVPV',
+        transcript: 'ENST00000512948', orfType: 'lncRNA来源非经典表位', immunogenicity: 91,
+        expression: 42.8, msSupport: '9 (PSMs)', rankScore: '0.903',
+        tier: '1A', binding: 'HLA-A*24:02 (IC50 = 38.4 nM)'
+      },
+      'SMP-24-00005': {
+        id: 'SMP-24-00005', cancer: '肝细胞癌 (HCC)', hla: 'HLA-A*02:01', sequence: 'KVLEYLSVV',
+        transcript: 'ENST00000354587', orfType: 'ALT-ORF', immunogenicity: 83,
+        expression: 22.4, msSupport: '3 (PSMs)', rankScore: '0.824',
+        tier: '1B', binding: 'HLA-A*02:01 (IC50 = 74.1 nM)'
+      },
+      'SMP-24-00006': {
+        id: 'SMP-24-00006', cancer: '结直肠癌 (CRC)', hla: 'HLA-A*11:01', sequence: 'TYRGTFEGV',
+        transcript: 'ENST00000311284', orfType: 'circRNA非经典翻译', immunogenicity: 75,
+        expression: 12.6, msSupport: '1 (PSM)', rankScore: '0.748',
+        tier: '2A', binding: 'HLA-A*11:01 (IC50 = 104.2 nM)'
+      },
+      'SMP-24-00007': {
+        id: 'SMP-24-00007', cancer: '卵巢癌 (OV)', hla: 'HLA-A*02:01', sequence: 'KLLEYLSVV',
+        transcript: 'ENST00000354587', orfType: 'ALT-ORF', immunogenicity: 90,
+        expression: 31.2, msSupport: '6 (PSMs)', rankScore: '0.898',
+        tier: '1A', binding: 'HLA-A*02:01 (IC50 = 48.9 nM)'
+      },
+      'SMP-24-00008': {
+        id: 'SMP-24-00008', cancer: '胃胃肠道肿瘤 (GIC)', hla: 'HLA-A*24:02', sequence: 'RYLDKLVPI',
+        transcript: 'ENST00000512948', orfType: 'lncRNA', immunogenicity: 68,
+        expression: 8.9, msSupport: '0 (计算预测)', rankScore: '0.675',
+        tier: '2B', binding: 'HLA-A*24:02 (IC50 = 158.0 nM)'
+      }
+    };
+
+    // State Variables
+    let currentTab = 'samples';
+    let currentPitchSlideIndex = 1;
+    const totalSlides = 10;
+    let pipelineSimProgress = 0;
+    let isPipelineAlreadyExecuted = false; // State track for upload simulation
+
+    // Page Load Setup
+    window.addEventListener('DOMContentLoaded', () => {
+      renderHeaders();
+      renderTableBody();
+      updateSelectedRowDetails('SMP-24-00001');
+      document.getElementById('legend-tnbc-text').innerText = 'TNBC 16%';
+      
+      // Listen to keyboard arrow keys for Pitch slide view navigation
+      window.addEventListener('keydown', (e) => {
+        const pitchView = document.getElementById('view-pitch');
+        const slideMode = document.getElementById('pitch-slide-mode');
+        
+        if (pitchView.classList.contains('active') && slideMode.style.display !== 'none') {
+          if (e.key === 'ArrowRight' || e.key === ' ') {
+            changeSlide(1);
+          } else if (e.key === 'ArrowLeft') {
+            changeSlide(-1);
+          }
+        }
+      });
+    });
+
+    // Toggle main viewport between SaaS platform and BP Pitch Deck
+    function setViewMode(mode) {
+      document.querySelectorAll('.view-container').forEach(v => {
+        v.classList.remove('active');
+        setTimeout(() => { v.style.display = 'none'; }, 200);
+      });
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      
+      const targetContainer = document.getElementById(`view-${mode}`);
+      const targetBtn = document.getElementById(`mode-btn-${mode}`);
+      
+      setTimeout(() => {
+        targetContainer.style.display = 'block';
+        setTimeout(() => {
+          targetContainer.classList.add('active');
+        }, 50);
+      }, 200);
+      
+      targetBtn.classList.add('active');
+    }
+
+    // Toggle sub-modes inside the Pitch Deck view (Slide vs Long Read)
+    function setPitchSubMode(submode) {
+      const slidePanel = document.getElementById('pitch-slide-mode');
+      const longPanel = document.getElementById('pitch-long-mode');
+      const slideCtrl = document.getElementById('slide-navigation-controls');
+      
+      document.querySelectorAll('.pm-btn').forEach(btn => btn.classList.remove('active'));
+      
+      if (submode === 'slide') {
+        longPanel.style.display = 'none';
+        slidePanel.style.display = 'block';
+        slideCtrl.style.opacity = '1';
+        slideCtrl.style.pointerEvents = 'auto';
+        document.getElementById('pm-btn-slide').classList.add('active');
+      } else {
+        slidePanel.style.display = 'none';
+        longPanel.style.display = 'grid';
+        slideCtrl.style.opacity = '0';
+        slideCtrl.style.pointerEvents = 'none';
+        document.getElementById('pm-btn-long').classList.add('active');
+      }
+    }
+
+    // Change Slides in Pitch slide view
+    function changeSlide(direction) {
+      let targetIndex = currentPitchSlideIndex + direction;
+      if (targetIndex < 1 || targetIndex > totalSlides) return;
+      
+      document.querySelectorAll('.slide-view').forEach(slide => {
+        slide.classList.remove('active');
+      });
+      
+      currentPitchSlideIndex = targetIndex;
+      document.getElementById(`slide-${currentPitchSlideIndex}`).classList.add('active');
+      document.getElementById('slide-indicator').innerText = `第 ${currentPitchSlideIndex} / ${totalSlides} 页`;
+      
+      document.getElementById('btn-prev-slide').disabled = (currentPitchSlideIndex === 1);
+      document.getElementById('btn-next-slide').disabled = (currentPitchSlideIndex === totalSlides);
+    }
+
+    // Render Table headers dynamically based on Active tab
+    function renderHeaders() {
+      const headersContainer = document.getElementById('table-headers');
+      let headersHtml = '';
+      
+      if (currentTab === 'samples') {
+        headersHtml = `
+          <th>样本 ID</th>
+          <th>对应癌种</th>
+          <th>HLA 等位基因</th>
+          <th>提取新肽段数</th>
+          <th>循证医学层级</th>
+          <th>GNN置信度</th>
+          <th>分析状态</th>
+          <th>计算时间</th>
+        `;
+      } else if (currentTab === 'peptides') {
+        headersHtml = `
+          <th>肽段序列</th>
+          <th>原始突变/转录本</th>
+          <th>非经典 ORF 类型</th>
+          <th>宿主 HLA</th>
+          <th>GNN 评分</th>
+          <th>证据层级</th>
+          <th>免疫状态</th>
+        `;
+      } else if (currentTab === 'targets') {
+        headersHtml = `
+          <th>疫苗候选编号</th>
+          <th>主治癌种</th>
+          <th>HLA 单倍型</th>
+          <th>免疫核心序列</th>
+          <th>证据评级</th>
+          <th>排序评分</th>
+          <th>体内外临床实验验证细节</th>
+        `;
+      } else if (currentTab === 'tasks') {
+        headersHtml = `
+          <th>计算任务 ID</th>
+          <th>样本 ID</th>
+          <th>分析策略</th>
+          <th>运行状态</th>
+          <th>完成百分比</th>
+          <th>启动日期</th>
+        `;
+      }
+      
+      headersContainer.innerHTML = headersHtml;
+    }
+
+    // Render Table body rows dynamically based on Active tab and custom data
+    function renderTableBody() {
+      const bodyContainer = document.getElementById('sample-table-body');
+      let bodyHtml = '';
+      let dataList = [];
+      
+      if (currentTab === 'samples') {
+        dataList = sampleData;
+        dataList.forEach((row, index) => {
+          bodyHtml += `
+            <tr id="row-${row.id}" data-id="${row.id}" data-cancer="${row.cancer}" data-hla="${row.hla}" data-tier="${row.tier}" onclick="handleRowClick('${row.id}')">
+              <td style="font-weight: 700; color: var(--morandi-lavender);">${row.id}</td>
+              <td>${row.cancer}</td>
+              <td style="font-family: monospace;">${row.hla}</td>
+              <td>${row.peptides}</td>
+              <td><span class="badge badge-${row.tier.toLowerCase()}">Level ${row.tier}</span></td>
+              <td style="font-weight: 700; color: var(--morandi-sage);">${row.confidence}</td>
+              <td><span class="${row.status === '已完成' ? 'status-completed' : 'status-running'}">${row.status}</span></td>
+              <td>${row.date}</td>
+            </tr>
+          `;
+        });
+      } else if (currentTab === 'peptides') {
+        dataList = peptideData;
+        dataList.forEach(row => {
+          bodyHtml += `
+            <tr id="row-${row.id}" data-id="${row.id}" data-cancer="all" data-hla="${row.hla}" data-tier="${row.tier}" onclick="handlePeptideClick('${row.id}')">
+              <td style="font-family: monospace; font-weight: 700; color: var(--morandi-lavender); letter-spacing: 0.5px;">${row.sequence}</td>
+              <td>${row.transcript}</td>
+              <td><span class="badge" style="background: rgba(235, 220, 208, 0.08); color: var(--morandi-cream);">${row.orf}</span></td>
+              <td style="font-family: monospace;">${row.hla}</td>
+              <td style="font-weight: 700; color: var(--morandi-sage);">${row.score}</td>
+              <td><span class="badge badge-${row.tier.toLowerCase()}">Level ${row.tier}</span></td>
+              <td><span class="${row.status === '已完成' ? 'status-completed' : 'status-running'}">${row.status === '已完成' ? '已验证' : '进行中'}</span></td>
+            </tr>
+          `;
+        });
+      } else if (currentTab === 'targets') {
+        dataList = targetData;
+        dataList.forEach(row => {
+          bodyHtml += `
+            <tr id="row-${row.id}">
+              <td style="font-weight: 700; color: var(--morandi-lavender);">${row.id}</td>
+              <td>${row.cancer}</td>
+              <td style="font-family: monospace;">${row.hla}</td>
+              <td style="font-family: monospace; letter-spacing: 0.5px;">${row.sequence}</td>
+              <td><span class="badge badge-${row.tier.toLowerCase()}">Level ${row.tier}</span></td>
+              <td style="font-weight: 700; color: var(--morandi-sage);">${row.score}</td>
+              <td style="font-size: 11px; color: var(--text-secondary); max-width: 260px; overflow: hidden; text-overflow: ellipsis;">${row.detail}</td>
+            </tr>
+          `;
+        });
+      } else if (currentTab === 'tasks') {
+        dataList = taskData;
+        dataList.forEach(row => {
+          bodyHtml += `
+            <tr id="row-${row.id}">
+              <td style="font-weight: 700; color: var(--morandi-lavender);">${row.id}</td>
+              <td>${row.sampleId}</td>
+              <td>${row.type}</td>
+              <td><span class="${row.status === '已完成' ? 'status-completed' : 'status-running'}">${row.status}</span></td>
+              <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:11px;">${row.progress}</span>
+                  <div class="progress-bar-container" style="width: 50px;">
+                    <div class="progress-bar-fill ${row.status === '已完成' ? 'pbf-blue' : 'pbf-lavender'}" style="width: ${row.progress}"></div>
+                  </div>
+                </div>
+              </td>
+              <td>${row.time}</td>
+            </tr>
+          `;
+        });
+      }
+      
+      bodyContainer.innerHTML = bodyHtml;
+      
+      // Update statistics counters
+      document.getElementById('total-count').innerText = dataList.length;
+      document.getElementById('visible-count').innerText = dataList.length;
+      
+      // Hide filter toolbar if on non-filterable tabs (targets/tasks)
+      const toolbarFilters = document.getElementById('toolbar-filter-group');
+      if (currentTab === 'targets' || currentTab === 'tasks') {
+        toolbarFilters.style.visibility = 'hidden';
+      } else {
+        toolbarFilters.style.visibility = 'visible';
+      }
+    }
+
+    // Toggle Table Tabs
+    function setTableTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      
+      currentTab = tab;
+      renderHeaders();
+      renderTableBody();
+      
+      // Automatically show first row details
+      if (tab === 'samples') {
+        updateSelectedRowDetails(sampleData[0].id);
+      } else if (tab === 'peptides') {
+        updatePeptideDetails(peptideData[0].id);
+      } else {
+        // Clear or show static description in drawer for target/task tabs
+        showGenericDetailsInDrawer();
+      }
+    }
+
+    // Update Detail Drawer when clicking a Sample row
+    function handleRowClick(sampleId) {
+      document.querySelectorAll('#sample-table-body tr').forEach(r => r.classList.remove('active-row'));
+      const activeRow = document.getElementById(`row-${sampleId}`);
+      if (activeRow) activeRow.classList.add('active-row');
+      
+      updateSelectedRowDetails(sampleId);
+    }
+
+    // Update Detail Drawer when clicking a Peptide row
+    function handlePeptideClick(pepId) {
+      document.querySelectorAll('#sample-table-body tr').forEach(r => r.classList.remove('active-row'));
+      const activeRow = document.getElementById(`row-${pepId}`);
+      if (activeRow) activeRow.classList.add('active-row');
+      
+      updatePeptideDetails(pepId);
+    }
+
+    // Render detailed information for Selected Sample
+    function updateSelectedRowDetails(sampleId) {
+      const data = microDetails[sampleId];
+      if (!data) return;
+      
+      const container = document.getElementById('drawer-content');
+      container.innerHTML = `
+        <div class="dg-item">
+          <span class="dg-label">当前样本编号</span>
+          <span class="dg-value" style="color: var(--morandi-lavender); font-size: 15px;">${data.id}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">主治生物癌种 & HLA分型</span>
+          <span class="dg-value">${data.cancer} · ${data.hla}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">优选出高可信新表位序列</span>
+          <div class="peptide-seq-box">${data.sequence}</div>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">原始来源转录本编号</span>
+          <span class="dg-value" style="font-family: monospace;">${data.transcript}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">ORF 翻译类型</span>
+          <span class="dg-value"><span class="badge" style="background: rgba(168, 157, 187, 0.12); color: var(--morandi-lavender); border: 1px solid rgba(168, 157, 187, 0.3);">${data.orfType}</span></span>
+        </div>
+        
+        <div class="dg-item">
+          <span class="dg-label">四层证据评级体系 (Evidence Tier)</span>
+          <span class="dg-value"><span class="badge badge-${data.tier.startsWith('1A') ? '1a' : data.tier.startsWith('1B') ? '1b' : '2a'}">${data.tier} 级高权重支持</span></span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">物理结合动力学 (IC50能)</span>
+          <span class="dg-value" style="font-size:12px; color: var(--text-secondary);">${data.binding}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">高维质谱支持 (MS PSMs)</span>
+          <span class="dg-value" style="font-size:12px; color: var(--text-secondary);">${data.msSupport}</span>
+        </div>
+        
+        <div class="dg-item">
+          <div class="drawer-progress-wrapper">
+            <span class="dg-label">细胞原性评分 (Immunogenicity)</span>
+            <span class="dg-value" style="color: var(--morandi-lavender);">${data.immunogenicity}%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill pbf-lavender" id="det-prog-1"></div>
+          </div>
+        </div>
+        
+        <div class="dg-item">
+          <div class="drawer-progress-wrapper">
+            <span class="dg-label">多组学转录表达丰度 (TPM)</span>
+            <span class="dg-value" style="color: var(--morandi-blue);">${data.expression} TPM</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill pbf-blue" id="det-prog-2"></div>
+          </div>
+        </div>
+      `;
+      
+      // Animate Drawer progress bars beautifully
+      setTimeout(() => {
+        const p1 = document.getElementById('det-prog-1');
+        const p2 = document.getElementById('det-prog-2');
+        if (p1) p1.style.width = `${data.immunogenicity}%`;
+        if (p2) p2.style.width = `${Math.min(100, data.expression * 2)}%`;
+      }, 50);
+    }
+
+    // Render detailed information for Selected Peptide
+    function updatePeptideDetails(pepId) {
+      const row = peptideData.find(p => p.id === pepId);
+      if (!row) return;
+      
+      const container = document.getElementById('drawer-content');
+      container.innerHTML = `
+        <div class="dg-item">
+          <span class="dg-label">当前肽段特征编码</span>
+          <span class="dg-value" style="color: var(--morandi-lavender); font-size: 15px;">${row.id}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">预测对应宿主 HLA 等位基因</span>
+          <span class="dg-value" style="font-family: monospace;">${row.hla}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">新表位核心核酸序列</span>
+          <div class="peptide-seq-box">${row.sequence}</div>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">转录来源分析</span>
+          <span class="dg-value" style="font-family: monospace;">${row.transcript} (${row.orf})</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">GNN 深度评分 (Rank Score)</span>
+          <span class="dg-value" style="color: var(--morandi-sage); font-size: 14px; font-weight: 800;">${row.score}</span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">循证层级评定</span>
+          <span class="dg-value"><span class="badge badge-${row.tier.toLowerCase()}">Level ${row.tier}</span></span>
+        </div>
+        <div class="dg-item">
+          <span class="dg-label">临床免疫活性</span>
+          <span class="dg-value">${row.status === '已完成' ? '🟩 T细胞体外激活已确认' : '🟨 体内安全性评估进行中'}</span>
+        </div>
+      `;
+    }
+
+    function showGenericDetailsInDrawer() {
+      const container = document.getElementById('drawer-content');
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px 10px; color: var(--text-muted); display:flex; flex-direction:column; gap:12px; align-items:center;">
+          <span style="font-size: 28px;">📡</span>
+          <span style="font-size:12px; line-height: 1.5;">请切换至 [样本库] 或 [专属肽段库] 选项卡，并单击具体行项以拉取多维度证据链的微观关联详情。</span>
+        </div>
+      `;
+    }
+
+    // Dynamic Filter Table Rows logic
+    function filterTable() {
+      if (currentTab !== 'samples' && currentTab !== 'peptides') return;
+      
+      const cancerVal = document.getElementById('filter-cancer').value;
+      const hlaVal = document.getElementById('filter-hla').value;
+      const tierVal = document.getElementById('filter-tier').value;
+      const searchVal = document.getElementById('search-sample').value.trim().toLowerCase();
+      
+      const rows = document.querySelectorAll('#sample-table-body tr');
+      let count = 0;
+      
+      rows.forEach(row => {
+        const id = row.getAttribute('data-id').toLowerCase();
+        const cancer = row.getAttribute('data-cancer');
+        const hla = row.getAttribute('data-hla');
+        const tier = row.getAttribute('data-tier');
+        
+        let seqMatch = false;
+        if (currentTab === 'peptides') {
+          const pep = peptideData.find(p => p.id.toLowerCase() === id);
+          if (pep && pep.sequence.toLowerCase().includes(searchVal)) {
+            seqMatch = true;
+          }
+        }
+        
+        const matchesSearch = id.includes(searchVal) || seqMatch;
+        const matchesCancer = cancerVal === 'all' || cancer === cancerVal;
+        const matchesHla = hlaVal === 'all' || hla === hlaVal;
+        const matchesTier = tierVal === 'all' || tier === tierVal;
+        
+        if (matchesSearch && matchesCancer && matchesHla && matchesTier) {
+          row.style.display = '';
+          count++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      document.getElementById('visible-count').innerText = count;
+    }
+
+
+    // =========================================================================
+    // ACTIVE LEARNING PIPELINE MODAL SIMULATOR
+    // =========================================================================
+    function openPipelineModal() {
+      if (isPipelineAlreadyExecuted) {
+        alert("您已完成新患者 P090 样本的高维度多组学比对分析。新表位已成功回流，可至[样本库]第一行查阅。");
+        return;
+      }
+      
+      const modal = document.getElementById('pipeline-modal');
+      modal.style.display = 'flex';
+      setTimeout(() => { modal.classList.add('active'); }, 50);
+      
+      // Set to first upload selection state
+      setModalState('upload');
+    }
+
+    function closePipelineModal() {
+      const modal = document.getElementById('pipeline-modal');
+      modal.classList.remove('active');
+      setTimeout(() => { modal.style.display = 'none'; }, 200);
+    }
+
+    function closePipelineModalOutside(e) {
+      if (e.target.id === 'pipeline-modal') {
+        closePipelineModal();
+      }
+    }
+
+    function setModalState(state) {
+      document.querySelectorAll('.modal-state').forEach(el => el.classList.remove('active'));
+      document.getElementById(`modal-state-${state}`).classList.add('active');
+    }
+
+    // Fast load from predefined buttons
+    function preloadAndRun(patientId, cancerType) {
+      setModalState('running');
+      runPipelineSimulation(patientId, cancerType);
+    }
+
+    function triggerPipelineRun() {
+      setModalState('running');
+      runPipelineSimulation('P090', 'TNBC');
+    }
+
+    // Step-by-step active learning pipeline animation logic
+    function runPipelineSimulation(patientId, cancerType) {
+      const logs = document.getElementById('console-logs');
+      logs.innerHTML = ''; // Clear logs
+      
+      // Reset steps classes
+      for(let i=1; i<=5; i++) {
+        const step = document.getElementById(`mps-step-${i}`);
+        step.className = 'mps-step pending';
+        document.getElementById(`mps-status-${i}`).innerText = '等待中...';
+        document.getElementById(`mps-progress-fill-${i}`).style.width = '0%';
+      }
+      
+      // Step 1: Input FASTQ
+      appendLog(logs, `[12:04:10] 成功检测到测序样本 [${patientId}] 测序输入文件。`);
+      appendLog(logs, `[12:04:10] 启动深度多组学分析管线，正在比对 WES 突变测序信息...`);
+      
+      const step1 = document.getElementById('mps-step-1');
+      step1.className = 'mps-step running';
+      document.getElementById('mps-status-1').innerText = '正在读取 WES FASTQ 文件...';
+      
+      animateStepProgress(1, 1200, () => {
+        step1.className = 'mps-step completed';
+        document.getElementById('mps-status-1').innerText = '已读取 32.4 GB 变异数据 (HLA-A*24:02)';
+        appendLog(logs, `[12:04:11] 样本输入完毕。HLA等位基因分析成功解析：HLA-A*24:02 单倍型。`);
+        
+        // Step 2: Multi-omics alternate ORF translation mining
+        const step2 = document.getElementById('mps-step-2');
+        step2.className = 'mps-step running';
+        document.getElementById('mps-status-2').innerText = '正在全转录组挖掘 UTR / lncRNA / circRNA 非经典翻译区域...';
+        appendLog(logs, `[12:04:12] 深度挖掘非经典三级密码子，过滤 1,280 条长链非编码 RNA 潜在翻译产物...`);
+        
+        animateStepProgress(2, 1400, () => {
+          step2.className = 'mps-step completed';
+          document.getElementById('mps-status-2').innerText = '识别出 2,415 个全新非经典 ALT-ORF 表位';
+          appendLog(logs, `[12:04:13] 转录翻译空间解密完成。提取出候选富集微环境肽段数量: 2,415。`);
+          
+          // Step 3: LRDB database immunogenicity matching
+          const step3 = document.getElementById('mps-step-3');
+          step3.className = 'mps-step running';
+          document.getElementById('mps-status-3').innerText = '正在与 LRDB 325,000+ 临床特异性免疫反应对照库进行精准匹配...';
+          
+          animateStepProgress(3, 1000, () => {
+            step3.className = 'mps-step completed';
+            document.getElementById('mps-status-3').innerText = '成功比对并筛选出 312 个高活性免疫新抗原前体';
+            appendLog(logs, `[12:04:14] 数据库双端哈希比对通过，滤除 2,103 个无免疫保护力背景杂多肽。`);
+            
+            // Step 4: Knowledge Graph GNN Heterogeneous Ranking
+            const step4 = document.getElementById('mps-step-4');
+            step4.className = 'mps-step running';
+            document.getElementById('mps-status-4').innerText = '正在拉取 Peptide-HLA-Sample-Study-TCR 五节点关联，图神经网络排序中...';
+            appendLog(logs, `[12:04:15] 加载大图谱边缘连接信息。多维度证据 Level A-D 自适应加权评估中...`);
+            
+            animateStepProgress(4, 1500, () => {
+              step4.className = 'mps-step completed';
+              document.getElementById('mps-status-4').innerText = '图谱关系定型。GNN 可解释性决策推理生成完毕';
+              appendLog(logs, `[12:04:16] GNN 评分模型收敛，计算不确定性校准中...`);
+              
+              // Step 5: Uncertainty estimation & Top-K Decision output
+              const step5 = document.getElementById('mps-step-5');
+              step5.className = 'mps-step running';
+              document.getElementById('mps-status-5').innerText = '计算校准置信区间，最终输出 Top-K 临床疫苗推荐清单...';
+              
+              animateStepProgress(5, 1100, () => {
+                step5.className = 'mps-step completed';
+                document.getElementById('mps-status-5').innerText = '成功导出高保护力 1A 级疫苗靶点候选 (置信度 0.94)';
+                appendLog(logs, `[12:04:17] 分析全部完成！新靶点序列已加入主动学习回流环路，模型自更新完毕。`);
+                
+                // Show Success Panel
+                setTimeout(() => {
+                  setModalState('success');
+                }, 400);
+              });
+            });
+          });
+        });
+      });
+    }
+
+    // Helper functions for pipeline simulation
+    function appendLog(consoleEl, text) {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-time">[${timeStr}]</span><span>${text}</span>`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function animateStepProgress(stepNum, duration, callback) {
+      const fillEl = document.getElementById(`mps-progress-fill-${stepNum}`);
+      let currentWidth = 0;
+      const intervalTime = 30;
+      const stepValue = 100 / (duration / intervalTime);
+      
+      const timer = setInterval(() => {
+        currentWidth += stepValue;
+        if (currentWidth >= 100) {
+          fillEl.style.width = '100%';
+          clearInterval(timer);
+          callback();
+        } else {
+          fillEl.style.width = `${currentWidth}%`;
+        }
+      }, intervalTime);
+    }
+
+    // Apply simulation results to SaaS dashboard tables, statistics and SVG charts dynamically
+    function closeAndApplyPipeline() {
+      closePipelineModal();
+      
+      if (isPipelineAlreadyExecuted) return;
+      isPipelineAlreadyExecuted = true;
+      
+      // 1. Prepend new patient row in Table (Real-world TNBC ALT-ORF data)
+      const newRow = {
+        id: 'SMP-26-00009',
+        cancer: 'TNBC',
+        hla: 'HLA-A*24:02',
+        peptides: '2,415',
+        tier: '1A',
+        confidence: '0.94',
+        status: '已完成',
+        date: '2026-05-20'
+      };
+      
+      // Inject to sampleData array
+      sampleData.unshift(newRow);
+      
+      // Inject details to microDetails
+      microDetails['SMP-26-00009'] = {
+        id: 'SMP-26-00009', cancer: '乳腺癌 (TNBC)', hla: 'HLA-A*24:02', sequence: 'RYLDKLVPV',
+        transcript: 'ENST00000512948', orfType: 'ALT-ORF (非经典 lncRNA)', immunogenicity: 94,
+        expression: 42.8, msSupport: '9 (PSMs) 强飞行质谱支持', rankScore: '0.938',
+        tier: '1A (小鼠肿瘤抑制验证)', binding: 'HLA-A*24:02 (IC50 = 38.4 nM)'
+      };
+      
+      // Re-render Table
+      setTableTab('samples');
+      handleRowClick('SMP-26-00009'); // Auto select and animate details drawer
+      
+      // 2. Increment counters in Statistics cards
+      document.getElementById('stats-db').innerText = '325,182+';
+      document.getElementById('stats-samples').innerText = '50,001+';
+      document.getElementById('stats-candidates').innerText = '18,643';
+      
+      // 3. Dynamically update Donut Chart (Increment TNBC percentage)
+      const tnbcSlice = document.getElementById('donut-slice-tnbc');
+      const pdacSlice = document.getElementById('donut-slice-pdac');
+      if (tnbcSlice) {
+        // Adjust TNBC slice visually to show it grew
+        tnbcSlice.setAttribute('stroke-dasharray', '28.27 157'); // increased from 25.13
+        pdacSlice.setAttribute('stroke-dashoffset', '-28.27'); // push next offset
+        document.getElementById('donut-center-val').innerText = '50,001+';
+        document.getElementById('legend-tnbc-text').innerText = 'TNBC 17% (↑)';
+      }
+      
+      // 4. Dynamically update Area Line Chart (Elevate 5月 peak)
+      const fillPath = document.getElementById('trend-fill');
+      const linePath = document.getElementById('trend-line');
+      const latestMarker = document.getElementById('chart-marker-latest');
+      if (linePath && fillPath) {
+        // Animate Bezier curve coordinate: change latest point y from 20 to 12 (growing peak)
+        const newFill = "M 20 80 C 45 78, 60 62, 85 58 C 110 54, 130 42, 155 35 C 180 28, 195 24, 220 12 L 220 90 L 20 90 Z";
+        const newCurve = "M 20 80 C 45 78, 60 62, 85 58 C 110 54, 130 42, 155 35 C 180 28, 195 24, 220 12";
+        
+        fillPath.setAttribute('d', newFill);
+        linePath.setAttribute('d', newCurve);
+        latestMarker.setAttribute('cy', '12');
+        document.getElementById('latest-month-label').style.fill = 'var(--morandi-sage)';
+        document.getElementById('latest-month-label').innerText = '5月 (新增)';
+      }
+      
+      // 5. Brighten the flow steps to completed
+      document.getElementById('flow-step-4').classList.add('completed');
+      document.getElementById('flow-step-5').classList.add('completed');
+      
+      alert("✨ 样本分析同步成功！已成功优选出全新表位 RYLDKLVPV (Level 1A) 并回流入库，不确定性估计校准完毕，仪表盘与大图谱指标同步递增。");
+    }
+  </script>
+</body>
+</html>
